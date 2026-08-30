@@ -1,0 +1,34 @@
+package com.campus.competition.vo;
+
+/**
+ * 技能视图
+ */
+public class SkillVO {
+
+    private Long id;
+    private String name;
+
+    public SkillVO() {
+    }
+
+    public SkillVO(Long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}

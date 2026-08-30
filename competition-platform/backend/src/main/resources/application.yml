@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: competition-platform
+  datasource:
+    # 数据库连接支持环境变量注入（Docker 部署时指向容器服务名）
+    # 本地开发默认 localhost:3306 root/123456
+    url: "jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/competition_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: "${DB_PASSWORD:123456}"
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout: 5000
+    # password: ""   # 本机未设置密码
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+logging:
+  level:
+    com.campus.competition: info
+
+# ===== JWT 配置（正式版）=====
+jwt:
+  # HS256 密钥，生产环境务必通过环境变量注入，不要硬编码
+  secret: "${JWT_SECRET:campus-competition-platform-jwt-secret-key-2026-please-change-in-prod-0123456789}"
+  # access token 有效期（秒），默认 2 小时
+  access-expire-seconds: 7200
+  # refresh token 有效期（秒），默认 7 天
+  refresh-expire-seconds: 604800
+
+# ===== 大模型配置（AI 推荐理由生成）=====
+llm:
+  # 是否启用；false 时仅使用规则引擎
+  enabled: ${LLM_ENABLED:true}
+  # ollama（本地模型，离线可用）/ deepseek（云端 API，需 LLM_API_KEY）/ none
+  provider: ${LLM_PROVIDER:ollama}
+  # Ollama 默认 http://localhost:11434；Docker 部署用 http://host.docker.internal:11434
+  base-url: ${LLM_BASE_URL:http://localhost:11434}
+  # ollama 模型名（deepseek-r1:7b / qwen2.5:7b 等）；deepseek provider 时用 deepseek-chat
+  model: ${LLM_MODEL:deepseek-r1:7b}
+  # 云端 API Key（deepseek 必填，通过环境变量注入，勿硬编码）
+  api-key: "${LLM_API_KEY:}"
+  # 单次调用超时（秒），超时自动降级规则模板
+  timeout-seconds: 15
