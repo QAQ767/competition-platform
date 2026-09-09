@@ -109,7 +109,7 @@
             </el-table-column>
             <el-table-column label="用户" min-width="160">
               <template #default="{ row }">
-                <span class="name-link" @click="$router.push(`/users/${row.userId}`)">
+                <span class="name-link" @click="$router.push(`/users/${row.userId}`)" @contextmenu.prevent="openUserMenu($event, { userId: row.userId, userName: row.nickname })">
                   <el-avatar :size="24" :src="row.avatar || undefined">{{ (row.nickname || '?').charAt(0) }}</el-avatar>
                   {{ row.nickname }}
                 </span>
@@ -157,6 +157,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
+import { openUserMenu } from '../utils/userMenu'
 import { TRAINING_COMPETITIONS, TRAINING_DIFFICULTY_TYPE, CHECKIN_LEVEL_COLOR } from '../utils/constants'
 
 const store = useUserStore()
