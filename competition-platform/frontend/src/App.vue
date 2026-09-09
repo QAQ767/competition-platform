@@ -7,6 +7,7 @@
         <router-link to="/teams" class="nav-link">组队广场</router-link>
         <router-link to="/stats" class="nav-link">数据统计</router-link>
         <router-link to="/achievements" class="nav-link">成果墙</router-link>
+        <router-link to="/training" class="nav-link">训练</router-link>
         <router-link to="/chat" class="nav-link">
           私聊
           <el-badge v-if="store.isLogin && dmUnread > 0" :value="dmUnread" :max="99" class="dm-badge" />

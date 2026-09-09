@@ -10,6 +10,8 @@ import com.campus.competition.entity.Team;
 import com.campus.competition.entity.TeamApplication;
 import com.campus.competition.entity.TeamDiscussion;
 import com.campus.competition.entity.TeamMember;
+import com.campus.competition.entity.TrainingCheckin;
+import com.campus.competition.entity.TrainingSite;
 import com.campus.competition.entity.User;
 import com.campus.competition.entity.UserSkill;
 import com.campus.competition.mapper.AchievementMapper;
@@ -22,6 +24,8 @@ import com.campus.competition.mapper.TeamApplicationMapper;
 import com.campus.competition.mapper.TeamDiscussionMapper;
 import com.campus.competition.mapper.TeamMapper;
 import com.campus.competition.mapper.TeamMemberMapper;
+import com.campus.competition.mapper.TrainingCheckinMapper;
+import com.campus.competition.mapper.TrainingSiteMapper;
 import com.campus.competition.mapper.UserMapper;
 import com.campus.competition.mapper.UserSkillMapper;
 import org.slf4j.Logger;
@@ -30,6 +34,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -55,13 +60,16 @@ public class DataSeeder implements CommandLineRunner {
     private final ChatMessageMapper chatMessageMapper;
     private final FeedbackMapper feedbackMapper;
     private final TeamDiscussionMapper teamDiscussionMapper;
+    private final TrainingSiteMapper trainingSiteMapper;
+    private final TrainingCheckinMapper trainingCheckinMapper;
 
     public DataSeeder(UserMapper userMapper, SkillTagMapper skillTagMapper, UserSkillMapper userSkillMapper,
                       CompetitionMapper competitionMapper, TeamMapper teamMapper, TeamMemberMapper teamMemberMapper,
                       TeamApplicationMapper teamApplicationMapper, NotificationMapper notificationMapper,
                       AchievementMapper achievementMapper,
                       ChatMessageMapper chatMessageMapper, FeedbackMapper feedbackMapper,
-                      TeamDiscussionMapper teamDiscussionMapper) {
+                      TeamDiscussionMapper teamDiscussionMapper,
+                      TrainingSiteMapper trainingSiteMapper, TrainingCheckinMapper trainingCheckinMapper) {
         this.userMapper = userMapper;
         this.skillTagMapper = skillTagMapper;
         this.userSkillMapper = userSkillMapper;
@@ -74,6 +82,8 @@ public class DataSeeder implements CommandLineRunner {
         this.chatMessageMapper = chatMessageMapper;
         this.feedbackMapper = feedbackMapper;
         this.teamDiscussionMapper = teamDiscussionMapper;
+        this.trainingSiteMapper = trainingSiteMapper;
+        this.trainingCheckinMapper = trainingCheckinMapper;
     }
 
     @Override
@@ -100,6 +110,13 @@ public class DataSeeder implements CommandLineRunner {
         }
         if (teamDiscussionMapper.selectCount(null) == 0) {
             seedTeamDiscussions();
+        }
+        // 训练资源 + 演示打卡记录独立播种
+        if (trainingSiteMapper.selectCount(null) == 0) {
+            seedTrainingSites();
+        }
+        if (trainingCheckinMapper.selectCount(null) == 0 && userMapper.selectCount(null) > 0) {
+            seedTrainingCheckins();
         }
     }
 
@@ -424,5 +441,72 @@ public class DataSeeder implements CommandLineRunner {
             return "已结束";
         }
         return "报名中";
+    }
+
+    /** 训练资源站（按竞赛 + 技能标签聚合练习网站直达链接） */
+    private void seedTrainingSites() {
+        Object[][] data = {
+                // ACM / 算法
+                {"力扣 LeetCode", "https://leetcode.cn", "算法", "ACM", "竞赛", "国内主流算法练习平台，海量题库与题解", true},
+                {"洛谷", "https://www.luogu.com.cn", "算法", "ACM", "竞赛", "国内 OI/ACM 刷题社区，比赛与题单丰富", true},
+                {"牛客竞赛", "https://ac.nowcoder.com", "算法", "ACM", "进阶", "校招/竞赛题库，周赛月赛频繁", false},
+                {"Codeforces", "https://codeforces.com", "算法", "ACM", "竞赛", "全球知名算法竞赛平台，题目质量高", false},
+                {"AtCoder", "https://atcoder.jp", "算法", "ACM", "进阶", "日系算法比赛平台，ABC/ARC/AGC 分级", false},
+                // CTF / 网络安全
+                {"NSSCTF", "https://www.nssctf.cn", "网络安全", "CTF", "竞赛", "面向新手的 CTF 练习平台，题库丰富", true},
+                {"BUUCTF", "https://buuoj.cn", "网络安全", "CTF", "竞赛", "国内 CTF 综合练习平台，历年真题", false},
+                {"攻防世界", "https://adworld.xctf.org.cn", "网络安全", "CTF", "进阶", "CTF 实战练习，Web/Pwn/逆向等分区", false},
+                {"CTFHub", "https://www.ctfhub.com", "网络安全", "CTF", "入门", "CTF 技能树式学习，适合零基础入门", false},
+                {"i春秋", "https://www.ichunqiu.com", "网络安全", "CTF", "入门", "网络安全在线学习与靶场", false},
+                // 数学建模 / 数据分析
+                {"Kaggle", "https://www.kaggle.com", "数据分析", "数学建模", "进阶", "全球数据科学竞赛与数据集社区", true},
+                {"和鲸社区", "https://www.heywhale.com", "数据分析", "数学建模", "入门", "国内数据科学竞赛平台，赛题与数据集丰富", false},
+                {"中国大学生在线数学建模", "https://www.mcm.edu.cn", "数据分析", "数学建模", "竞赛", "数学建模竞赛官方指定学习入口", false},
+                {"Gurobi 学习中心", "https://www.gurobi.cn", "机器学习", "数学建模", "进阶", "运筹优化建模工具 Gurobi 中文学习", false},
+                // 蓝桥杯 / 通用
+                {"蓝桥杯官网", "https://dasai.lanqiao.cn", "算法", "蓝桥杯", "竞赛", "蓝桥杯大赛官方报名与练习入口", true},
+                {"Vue 官方文档", "https://cn.vuejs.org", "前端", "通用", "入门", "Vue 3 官方中文文档", false},
+                {"菜鸟教程", "https://www.runoob.com", "前端", "通用", "入门", "前端/后端/数据库入门教程集合", false},
+                {"W3School", "https://www.w3school.com.cn", "前端", "通用", "入门", "Web 前端基础教程", false},
+                {"掘金", "https://juejin.cn", "后端", "通用", "进阶", "技术社区，优秀实战文章与专栏", false},
+                {"牛客刷题", "https://www.nowcoder.com", "算法", "通用", "入门", "面试/笔试刷题与校招真题", false},
+        };
+        for (Object[] row : data) {
+            TrainingSite site = new TrainingSite();
+            site.setName((String) row[0]);
+            site.setUrl((String) row[1]);
+            site.setTags((String) row[2]);
+            site.setCompetition((String) row[3]);
+            site.setDifficulty((String) row[4]);
+            site.setDescription((String) row[5]);
+            site.setRecommended((Boolean) row[6]);
+            site.setStatus("启用");
+            site.setCreatedAt(LocalDateTime.now());
+            trainingSiteMapper.insert(site);
+        }
+        log.info("已初始化 {} 条训练资源", data.length);
+    }
+
+    /** 演示打卡记录：给前 6 个学生随机生成不同累计天数（供排行榜/日历演示） */
+    private void seedTrainingCheckins() {
+        List<User> users = userMapper.selectList(null);
+        int[] days = {35, 12, 5, 25, 8, 3};
+        int idx = 0;
+        LocalDate today = LocalDate.now();
+        for (int u = 1; u <= 6 && idx < days.length; u++) {
+            int count = days[idx++];
+            for (int i = 0; i < count; i++) {
+                TrainingCheckin checkin = new TrainingCheckin();
+                checkin.setUserId((long) u);
+                checkin.setCheckinDate(today.minusDays(i));
+                checkin.setCreateTime(LocalDateTime.now());
+                try {
+                    trainingCheckinMapper.insert(checkin);
+                } catch (Exception ignored) {
+                    // 唯一键冲突忽略（防重复播种）
+                }
+            }
+        }
+        log.info("已初始化演示打卡记录");
     }
 }

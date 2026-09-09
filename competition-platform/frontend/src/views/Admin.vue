@@ -123,6 +123,43 @@
             @current-change="onAchPageChange"
           />
         </el-tab-pane>
+
+        <el-tab-pane label="训练资源" name="training">
+          <div style="margin-bottom: 12px">
+            <el-button type="primary" size="small" @click="openSiteAdd">＋ 新增训练资源</el-button>
+            <el-input v-model="siteKeyword" placeholder="搜索资源名" clearable style="width: 200px; margin-left: 10px" @keyup.enter="loadSites" />
+          </div>
+          <el-table :data="sites" size="small" v-loading="siteLoading">
+            <el-table-column prop="name" label="资源名" min-width="150" />
+            <el-table-column label="直达" width="80">
+              <template #default="{ row }">
+                <el-link type="primary" :href="row.url" target="_blank" :underline="false">打开</el-link>
+              </template>
+            </el-table-column>
+            <el-table-column prop="competition" label="竞赛" width="90" />
+            <el-table-column prop="tags" label="标签" width="130" />
+            <el-table-column prop="difficulty" label="难度" width="80" />
+            <el-table-column label="推荐" width="70">
+              <template #default="{ row }">{{ row.recommended ? '★' : '' }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="70" />
+            <el-table-column label="操作" width="130">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" link @click="openSiteEdit(row)">编辑</el-button>
+                <el-button type="danger" size="small" link @click="removeSite(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination
+            v-if="siteTotal > sitePageSize"
+            layout="prev, pager, next, total"
+            :total="siteTotal"
+            :page-size="sitePageSize"
+            :current-page="sitePage"
+            style="justify-content: center; margin-top: 8px"
+            @current-change="onSitePageChange"
+          />
+        </el-tab-pane>
       </el-tabs>
     </el-card>
 
@@ -145,6 +182,35 @@
         <el-button type="primary" :loading="saving" @click="doAdd">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="siteVisible" :title="siteForm.id ? '编辑训练资源' : '新增训练资源'" width="520px">
+      <el-form :model="siteForm" label-width="80px">
+        <el-form-item label="资源名" required><el-input v-model="siteForm.name" placeholder="如：力扣 LeetCode" /></el-form-item>
+        <el-form-item label="链接" required><el-input v-model="siteForm.url" placeholder="https://..." /></el-form-item>
+        <el-form-item label="所属竞赛">
+          <el-select v-model="siteForm.competition" style="width: 100%">
+            <el-option v-for="c in TRAINING_COMPETITIONS" :key="c" :label="c" :value="c" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="技能标签">
+          <el-input v-model="siteForm.tags" placeholder="逗号分隔，如：算法,数据结构" />
+        </el-form-item>
+        <el-form-item label="难度">
+          <el-select v-model="siteForm.difficulty" style="width: 100%">
+            <el-option v-for="d in TRAINING_DIFFICULTY" :key="d" :label="d" :value="d" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="简介"><el-input v-model="siteForm.description" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="推荐"><el-switch v-model="siteForm.recommended" /></el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="siteForm.status" active-value="启用" inactive-value="停用" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="siteVisible = false">取消</el-button>
+        <el-button type="primary" :loading="siteSaving" @click="saveSite">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -152,7 +218,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
-import { LEVELS } from '../utils/constants'
+import { LEVELS, TRAINING_COMPETITIONS, TRAINING_DIFFICULTY } from '../utils/constants'
 
 const tab = ref('competition')
 const list = ref([])
@@ -175,6 +241,16 @@ const achLoading = ref(false)
 const achPage = ref(1)
 const achPageSize = 10
 const achTotal = ref(0)
+// 训练资源管理
+const sites = ref([])
+const siteLoading = ref(false)
+const sitePage = ref(1)
+const sitePageSize = 10
+const siteTotal = ref(0)
+const siteKeyword = ref('')
+const siteVisible = ref(false)
+const siteSaving = ref(false)
+const siteForm = reactive({ id: null, name: '', url: '', competition: '通用', tags: '', difficulty: '入门', description: '', recommended: false, status: '启用' })
 const form = reactive({
   name: '',
   organizer: '',
@@ -294,11 +370,72 @@ async function handleFeedback(row) {
   loadFeedback()
 }
 
+// ===== 训练资源管理 =====
+async function loadSites() {
+  siteLoading.value = true
+  try {
+    const data = await api.get('/training/admin/sites', {
+      params: { keyword: siteKeyword.value, page: sitePage.value, size: sitePageSize }
+    })
+    sites.value = data.records || []
+    siteTotal.value = data.total || 0
+  } finally {
+    siteLoading.value = false
+  }
+}
+
+function onSitePageChange(p) {
+  sitePage.value = p
+  loadSites()
+}
+
+function openSiteAdd() {
+  Object.assign(siteForm, { id: null, name: '', url: '', competition: '通用', tags: '', difficulty: '入门', description: '', recommended: false, status: '启用' })
+  siteVisible.value = true
+}
+
+function openSiteEdit(row) {
+  Object.assign(siteForm, {
+    id: row.id, name: row.name, url: row.url, competition: row.competition,
+    tags: row.tags, difficulty: row.difficulty, description: row.description,
+    recommended: !!row.recommended, status: row.status
+  })
+  siteVisible.value = true
+}
+
+async function saveSite() {
+  if (!siteForm.name || !siteForm.url) {
+    ElMessage.warning('请填写资源名和链接')
+    return
+  }
+  siteSaving.value = true
+  try {
+    if (siteForm.id) {
+      await api.put(`/training/admin/sites/${siteForm.id}`, siteForm)
+    } else {
+      await api.post('/training/admin/sites', siteForm)
+    }
+    ElMessage.success('已保存')
+    siteVisible.value = false
+    loadSites()
+  } finally {
+    siteSaving.value = false
+  }
+}
+
+async function removeSite(row) {
+  await ElMessageBox.confirm(`确定删除训练资源「${row.name}」吗？`, '删除确认', { type: 'warning' })
+  await api.delete(`/training/admin/sites/${row.id}`)
+  ElMessage.success('已删除')
+  loadSites()
+}
+
 onMounted(() => {
   load()
   loadFeedback()
   loadLogs()
   loadAchievements()
+  loadSites()
 })
 </script>
 

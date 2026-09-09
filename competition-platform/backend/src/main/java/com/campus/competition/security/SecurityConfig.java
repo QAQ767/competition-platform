@@ -45,7 +45,7 @@ public class SecurityConfig {
                 // 公开接口
                 .antMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/competitions", "/api/teams", "/api/teams/*",
-                        "/api/stats/**", "/api/achievements").permitAll()
+                        "/api/stats/**", "/api/achievements", "/api/training/sites", "/api/training/tags").permitAll()
                 .antMatchers("/ws/**").permitAll() // WebSocket 握手，认证在首条消息内完成
                 .antMatchers("/uploads/**").permitAll() // 上传文件静态资源
                 .antMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll() // API 文档

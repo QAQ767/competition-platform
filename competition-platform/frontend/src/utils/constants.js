@@ -28,3 +28,21 @@ export const APPLY_STATUS_TYPE = {
   '已通过': 'success',
   '已拒绝': 'danger'
 }
+
+/** 训练竞赛分类 */
+export const TRAINING_COMPETITIONS = ['ACM', 'CTF', '数学建模', '蓝桥杯', '互联网+', '通用']
+
+/** 训练资源难度 */
+export const TRAINING_DIFFICULTY = ['入门', '进阶', '竞赛']
+
+/** 打卡难度标签颜色 */
+export const TRAINING_DIFFICULTY_TYPE = { '入门': 'info', '进阶': 'warning', '竞赛': 'danger' }
+
+/** 打卡等级（累计天数区间） */
+export const CHECKIN_LEVEL_COLOR = {
+  '见习': 'info',
+  '进阶': 'primary',
+  '熟练': 'warning',
+  '大师': 'danger',
+  '宗师': 'danger'
+}

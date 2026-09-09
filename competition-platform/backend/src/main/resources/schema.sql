@@ -192,3 +192,33 @@ CREATE TABLE IF NOT EXISTS team_discussion (
     content     VARCHAR(1000),
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ========== 新增：训练模块 ==========
+CREATE TABLE IF NOT EXISTS training_site (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name           VARCHAR(100) NOT NULL,
+    url            VARCHAR(300) NOT NULL,
+    tags           VARCHAR(200),   -- 技能标签（逗号分隔，复用 skill_tag 体系）
+    competition    VARCHAR(50),    -- 关联竞赛类型（ACM / CTF / 数学建模 / 蓝桥杯 / 互联网+ / 通用）
+    difficulty     VARCHAR(20) DEFAULT '入门',
+    description    VARCHAR(500),
+    recommended    BOOLEAN DEFAULT FALSE,
+    status         VARCHAR(20) DEFAULT '启用',
+    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS training_checkin (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id      BIGINT NOT NULL,
+    checkin_date DATE NOT NULL,
+    create_time  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_date (user_id, checkin_date)
+);
+
+CREATE TABLE IF NOT EXISTS training_favorite (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    site_id     BIGINT NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_site (user_id, site_id)
+);

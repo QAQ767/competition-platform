@@ -7,6 +7,7 @@ const routes = [
   { path: '/teams/:id', component: () => import('../views/TeamDetail.vue') },
   { path: '/stats', component: () => import('../views/Stats.vue') },
   { path: '/achievements', component: () => import('../views/Achievements.vue') },
+  { path: '/training', component: () => import('../views/Training.vue') },
   { path: '/users/:id', component: () => import('../views/UserHome.vue') },
   { path: '/chat', component: () => import('../views/Chat.vue'), meta: { requiresAuth: true } },
   { path: '/feedback', component: () => import('../views/Feedback.vue'), meta: { requiresAuth: true } },
