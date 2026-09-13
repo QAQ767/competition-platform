@@ -211,3 +211,10 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
+.text-icon {
+  color: #7a8dab;
+  font-size: 15px;
+  vertical-align: -2px;
+  margin-right: 5px;
+}

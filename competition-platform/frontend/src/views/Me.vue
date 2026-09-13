@@ -78,7 +78,7 @@
     </el-card>
 
     <el-card shadow="never" class="block">
-      <template #header>🤖 我的参赛状态（AI 推荐候选池开关）</template>
+      <template #header><UiLabel icon="Aim">我的参赛意向</UiLabel></template>
       <el-alert
         type="info"
         :closable="false"
@@ -175,6 +175,8 @@
               <el-button
                 type="success"
                 size="small"
+                :loading="inviteBusy.has(row.id)"
+                :disabled="inviteBusy.has(row.id)"
                 @click="handleInvite(row, 'accept')"
                 >接受</el-button
               >
@@ -182,6 +184,7 @@
                 type="danger"
                 size="small"
                 plain
+                :disabled="inviteBusy.has(row.id)"
                 @click="handleInvite(row, 'reject')"
                 >拒绝</el-button
               >
@@ -267,6 +270,7 @@ const store = useUserStore()
 const loading = ref(false)
 const myTeams = ref([])
 const myApplications = ref([])
+const inviteBusy = ref(new Set())
 const editVisible = ref(false)
 const saving = ref(false)
 const avatarUploading = ref(false)
@@ -338,6 +342,8 @@ async function load() {
     ])
     myTeams.value = teams
     myApplications.value = applications
+  } catch {
+    // 接口层提示错误；登录失效时允许正常跳转到登录页。
   } finally {
     loading.value = false
   }
@@ -345,22 +351,19 @@ async function load() {
 
 /** 处理收到的入队邀请（接受/拒绝），并同步把相关邀请通知标记已读（让铃铛熄灭） */
 async function handleInvite(row, action) {
-  await api.post(`/teams/invites/${row.id}/${action}`)
-  ElMessage.success(
-    action === 'accept' ? '已接受邀请，恭喜入队！' : '已拒绝该邀请'
-  )
+  if (inviteBusy.value.has(row.id)) return
+  inviteBusy.value.add(row.id)
   try {
-    const notifs = await api.get('/notifications')
-    const unreadInvites = (notifs || []).filter(
-      (n) => n.type === 'INVITE' && !n.isRead
+    await api.post(`/teams/invites/${row.id}/${action}`)
+    ElMessage.success(
+      action === 'accept' ? '已接受邀请，恭喜入队！' : '已拒绝该邀请'
     )
-    await Promise.all(
-      unreadInvites.map((n) => api.post(`/notifications/${n.id}/read`))
-    )
-  } catch (e) {
-    /* 已读同步失败不影响主流程 */
+    await load()
+  } catch {
+    /* 接口层提示 */
+  } finally {
+    inviteBusy.value.delete(row.id)
   }
-  load()
 }
 
 /** 退出队伍（队员） */

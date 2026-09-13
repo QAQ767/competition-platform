@@ -90,6 +90,11 @@ CREATE TABLE IF NOT EXISTS team_task (
     title       VARCHAR(100),
     content     VARCHAR(500),
     assignee_id BIGINT,
+    phase       VARCHAR(20) NOT NULL DEFAULT '准备阶段',
+    priority    VARCHAR(10) NOT NULL DEFAULT '普通',
+    resource_id BIGINT,
+    completion_note VARCHAR(1000),
+    completed_at DATETIME,
     status      VARCHAR(20),
     deadline    DATETIME,
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -131,6 +136,7 @@ CREATE TABLE IF NOT EXISTS user_follow (
 );
 
 CREATE TABLE IF NOT EXISTS notification (
+    invite_id   BIGINT,
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id     BIGINT,
     type        VARCHAR(20),

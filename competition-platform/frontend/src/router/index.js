@@ -30,7 +30,7 @@ const routes = [
   {
     path: '/admin',
     component: () => import('../views/Admin.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
 
@@ -45,7 +45,16 @@ const router = createRouter({
 router.beforeEach((to) => {
   const token = localStorage.getItem('token')
   if (to.meta.requiresAuth && !token) {
-    return '/login'
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.requiresAdmin) {
+    let user = null
+    try {
+      user = JSON.parse(localStorage.getItem('user') || 'null')
+    } catch {
+      /* 无效资料按普通访问处理 */
+    }
+    if (user?.role !== 'ADMIN') return '/'
   }
   if (to.path === '/login' && token) {
     return '/'

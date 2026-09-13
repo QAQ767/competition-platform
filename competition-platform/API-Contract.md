@@ -5,8 +5,10 @@
 
 ## 0. 通用约定
 
+2026-09 扩展：备赛任务的阶段、优先级、资料关联、完成复盘、任务编辑和计划生成接口，以及邀请通知关联字段，见 [备赛计划接口与兼容约定](docs/preparation-plan.md)。
+
 - 所有响应统一包装：`{ "code": 200, "message": "success", "data": ... }`；`code != 200` 表示失败，前端弹 message 提示。
-- 认证方式：登录后返回 `token`，前端存 localStorage，之后请求头携带 `X-Token: <token>`。
+- 认证方式：登录后返回 `accessToken`、`refreshToken` 和 `user`；请求头携带 `Authorization: Bearer <accessToken>`。访问凭证过期时使用 `/auth/refresh` 刷新，并发失败请求共用一次刷新。
 - 公开接口（无需登录）：`GET /competitions`、`GET /teams`、`GET /teams/{id}`、`POST /auth/login`、`POST /auth/register`。其余接口需登录，未登录返回 `{code:401}`。
 - 日期格式：`yyyy-MM-dd HH:mm:ss`。
 
@@ -25,7 +27,7 @@ TeamApplication: { id, teamId, userId, userName, intro, status("待审批"/"已�
 TeamMember: { id, teamId, userId, userName, role("队长"/"队员"), joinedTime }
 RecommendUser: { userId, nickname, college, major, skills:[String],
                  competeStatus, matchScore(0~100), reason, hasExperience(boolean) }
-Notification: { id, type("SYSTEM"/"APPLY"/"INVITE"/"APPROVE"), content, isRead, createTime }
+Notification: { id, type, content, isRead, createTime, inviteId?, inviteStatus? }
 Stats: { userCount, teamCount, competitionCount, achievementCount,
          hotCompetitions:[{name, teamCount}] }
 ```
@@ -38,9 +40,10 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 ### 认证 Auth
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|
-| POST | /auth/register | {username,password,email,college,major} | {token, user}（注册后自动登录） |
-| POST | /auth/login | {username,password} | {token, user} |
-| GET | /auth/me | 头 X-Token | user |
+| POST | /auth/register | {username,password,email,college,major} | {accessToken, refreshToken, user}（注册后自动登录） |
+| POST | /auth/login | {username,password} | {accessToken, refreshToken, user} |
+| POST | /auth/refresh | {refreshToken} | {accessToken, refreshToken, user} |
+| GET | /auth/me | Authorization: Bearer | user |
 
 ### 用户 User
 | 方法 | 路径 | 请求 | 返回 data |
@@ -91,7 +94,7 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 ### 通知 Notification
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|
-| GET | /notifications | — | [Notification]（未读在前） |
+| GET | /notifications | — | [Notification]（按创建时间倒序；邀请状态独立于已读状态） |
 | POST | /notifications/{id}/read | — | — |
 
 ### 数据统计 Stats

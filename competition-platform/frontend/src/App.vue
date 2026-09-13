@@ -137,13 +137,31 @@
                 <div class="notice-time" @click="markRead(n)">
                   {{ n.createTime }}
                 </div>
+                <el-button
+                  v-if="n.type === 'INVITE' && !n.inviteId"
+                  link
+                  type="primary"
+                  @click="router.push('/me')"
+                  >到个人中心查看邀请</el-button
+                >
+                <span
+                  v-if="n.inviteId && n.inviteStatus !== '待审批'"
+                  class="notice-time"
+                  >{{ n.inviteStatus }}</span
+                >
                 <div
-                  v-if="n.type === 'INVITE' && !n.isRead"
+                  v-if="
+                    n.type === 'INVITE' &&
+                    n.inviteId &&
+                    n.inviteStatus === '待审批'
+                  "
                   class="notice-actions"
                 >
                   <el-button
                     type="success"
                     size="small"
+                    :loading="inviteBusy.has(n.inviteId)"
+                    :disabled="inviteBusy.has(n.inviteId)"
                     @click.stop="handleInvite(n, 'accept')"
                     >接受邀请</el-button
                   >
@@ -151,6 +169,7 @@
                     type="danger"
                     size="small"
                     plain
+                    :disabled="inviteBusy.has(n.inviteId)"
                     @click.stop="handleInvite(n, 'reject')"
                     >拒绝</el-button
                   >
@@ -185,7 +204,9 @@
           >
         </div>
       </header>
-      <main id="main-content" class="main" tabindex="-1"><router-view /></main>
+      <main id="main-content" class="main" tabindex="-1">
+        <router-view :key="route.path" />
+      </main>
       <footer class="workspace-footer">
         <span>竞赛同行 · 让热爱相遇，让成长发生</span
         ><span>探索 / 协作 / 成长</span>
@@ -243,6 +264,7 @@ let dmTimer = null
 let unsubWs = null
 
 const notifications = ref([])
+const inviteBusy = ref(new Set())
 const unreadCount = computed(
   () => notifications.value.filter((n) => !n.isRead).length
 )
@@ -302,35 +324,28 @@ async function clearAllNotifications() {
 
 /** 在铃铛里直接接受/拒绝入队邀请 */
 async function handleInvite(n, action) {
+  if (!n.inviteId || inviteBusy.value.has(n.inviteId)) return
+  inviteBusy.value.add(n.inviteId)
   try {
-    const invites = await api.get('/teams/invites/me')
-    const invite = invites && invites.length ? invites[0] : null
-    if (!invite) {
-      ElMessage.warning('没有待处理的邀请')
-      return
-    }
-    await api.post(`/teams/invites/${invite.id}/${action}`)
+    await api.post(`/teams/invites/${n.inviteId}/${action}`)
+    n.inviteStatus = action === 'accept' ? '已通过' : '已拒绝'
+    n.isRead = true
     ElMessage.success(
       action === 'accept' ? '已接受邀请，恭喜入队！' : '已拒绝该邀请'
     )
-    // 立即置灰并隐藏操作按钮，同时同步服务端已读状态
-    n.isRead = true
-    try {
-      await api.post(`/notifications/${n.id}/read`)
-    } catch (e) {
-      /* 已读失败不影响主流程 */
-    }
-    loadNotifications()
-  } catch (e) {
-    /* 后端已弹出错误提示 */
+    await loadNotifications()
+  } catch {
+    await loadNotifications()
+  } finally {
+    inviteBusy.value.delete(n.inviteId)
   }
 }
 
-function onCommand(cmd) {
+async function onCommand(cmd) {
   if (cmd === 'me') {
     router.push('/me')
   } else if (cmd === 'logout') {
-    store.logout()
+    await store.logout()
     ElMessage.success('已退出登录')
     router.push('/')
   }

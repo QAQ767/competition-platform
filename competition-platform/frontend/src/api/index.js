@@ -1,92 +1,112 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
-import { refreshWsConnection } from '../utils/websocket'
+import { useUserStore } from '../stores/user'
+import { disconnectWebSocket, refreshWsConnection } from '../utils/websocket'
 
-/**
- * axios 实例：baseURL /api（开发期由 Vite 代理到 8080）
- * 认证：Authorization: Bearer <accessToken>（v2.0 JWT）
- * 401 时自动用 refreshToken 刷新一次并重试，失败则跳登录页
- */
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 15000
-})
+const api = axios.create({ baseURL: '/api', timeout: 15000 })
+let refreshing = null
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`
-  }
+  if (token) config.headers.Authorization = 'Bearer ' + token
   return config
 })
 
-async function refreshToken() {
-  const refreshToken = localStorage.getItem('refreshToken')
-  if (!refreshToken) return null
-  const res = await axios.post('/api/auth/refresh', { refreshToken })
-  if (res.data && res.data.code === 200) {
-    const auth = res.data.data
-    localStorage.setItem('token', auth.accessToken)
-    localStorage.setItem('refreshToken', auth.refreshToken)
-    refreshWsConnection() // token 已更换，WebSocket 重连
-    return auth.accessToken
-  }
-  return null
-}
-
-function forceLogout() {
+function expireSession() {
+  const hadSession = !!localStorage.getItem('token')
+  const store = useUserStore()
+  store.token = ''
+  store.refreshToken = ''
+  store.user = null
   localStorage.removeItem('token')
   localStorage.removeItem('refreshToken')
   localStorage.removeItem('user')
-  router.push('/login')
+  disconnectWebSocket()
+  const current = router.currentRoute.value
+  if (current.path !== '/login')
+    router.replace({ path: '/login', query: { redirect: current.fullPath } })
+  if (hadSession) ElMessage.warning('登录已过期，请重新登录')
+}
+
+function refreshAccessToken() {
+  if (refreshing) return refreshing
+  const previous = localStorage.getItem('refreshToken')
+  if (!previous) return Promise.resolve(null)
+  refreshing = axios
+    .post('/api/auth/refresh', { refreshToken: previous }, { timeout: 15000 })
+    .then((res) => {
+      if (
+        res.data?.code !== 200 ||
+        !res.data.data?.accessToken ||
+        localStorage.getItem('refreshToken') !== previous
+      )
+        return null
+      const auth = res.data.data
+      const store = useUserStore()
+      store.token = auth.accessToken
+      store.refreshToken = auth.refreshToken
+      localStorage.setItem('token', auth.accessToken)
+      localStorage.setItem('refreshToken', auth.refreshToken)
+      refreshWsConnection()
+      return auth.accessToken
+    })
+    .finally(() => {
+      refreshing = null
+    })
+  return refreshing
+}
+
+async function handleUnauthorized(config, error) {
+  if (/^\/auth\/(login|register|refresh)$/.test(config?.url || '')) {
+    ElMessage.error(
+      error.response?.data?.message || error.message || '账号或密码不正确'
+    )
+    throw error
+  }
+  if (config && !config._retry) {
+    config._retry = true
+    try {
+      const current = localStorage.getItem('token')
+      // 同一批失败请求可能晚于刷新完成才返回，优先复用已经更新的 token。
+      const token =
+        current && config.headers.Authorization !== 'Bearer ' + current
+          ? current
+          : await refreshAccessToken()
+      if (token) {
+        config.headers.Authorization = 'Bearer ' + token
+        return api(config)
+      }
+    } catch {
+      /* 刷新失败时统一清理界面与本地登录态。 */
+    }
+  }
+  expireSession()
+  throw error
 }
 
 api.interceptors.response.use(
   (res) => {
     const body = res.data
-    if (body && body.code !== undefined) {
-      if (body.code === 200) {
-        return body.data
-      }
-      if (body.code === 401) {
-        forceLogout()
-        ElMessage.warning('登录已过期，请重新登录')
-        return Promise.reject(new Error(body.message || '未登录'))
-      }
-      if (body.code === 403) {
-        ElMessage.error(body.message || '没有权限')
-        return Promise.reject(new Error(body.message || '没有权限'))
-      }
-      ElMessage.error(body.message || '请求失败')
-      return Promise.reject(new Error(body.message || '请求失败'))
-    }
-    return body
+    if (body?.code === undefined) return body
+    if (body.code === 200) return body.data
+    const error = new Error(body.message || '请求失败')
+    if (body.code === 401) return handleUnauthorized(res.config, error)
+    ElMessage.error(
+      body.message || (body.code === 403 ? '没有权限执行该操作' : '请求失败')
+    )
+    return Promise.reject(error)
   },
-  async (err) => {
-    const { response, config } = err
-    // HTTP 401：尝试用 refresh token 刷新一次后重放原请求
-    if (response && response.status === 401 && !config._retry) {
-      config._retry = true
-      try {
-        const newToken = await refreshToken()
-        if (newToken) {
-          config.headers['Authorization'] = `Bearer ${newToken}`
-          return api(config)
-        }
-      } catch (e) {
-        /* 刷新失败，走登出 */
-      }
-      forceLogout()
-      ElMessage.warning('登录已过期，请重新登录')
-      return Promise.reject(err)
-    }
-    if (response && response.status === 403) {
-      ElMessage.error('没有权限执行该操作')
-      return Promise.reject(err)
-    }
-    ElMessage.error(err.message || '网络错误')
-    return Promise.reject(err)
+  (error) => {
+    if (error.response?.status === 401)
+      return handleUnauthorized(error.config, error)
+    ElMessage.error(
+      error.response?.data?.message ||
+        (error.response?.status === 403
+          ? '没有权限执行该操作'
+          : '网络连接失败，请稍后重试')
+    )
+    return Promise.reject(error)
   }
 )
 

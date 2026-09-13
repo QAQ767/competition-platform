@@ -4,24 +4,43 @@
       <el-tabs v-model="tab">
         <el-tab-pane label="竞赛管理" name="competition">
           <div class="card-head">
-            <el-button type="primary" size="small" @click="addVisible = true">＋ 新增竞赛</el-button>
+            <el-button type="primary" size="small" @click="addVisible = true"
+              >＋ 新增竞赛</el-button
+            >
           </div>
-          <el-table :data="list" size="small" v-loading="loading" style="margin-top: 12px">
+          <el-table
+            :data="list"
+            size="small"
+            v-loading="loading"
+            style="margin-top: 12px"
+          >
             <el-table-column prop="name" label="竞赛名称" min-width="160" />
             <el-table-column prop="organizer" label="主办方" min-width="140" />
             <el-table-column label="级别" width="80">
-              <template #default="{ row }"><el-tag size="small">{{ row.level }}</el-tag></template>
+              <template #default="{ row }"
+                ><el-tag size="small">{{ row.level }}</el-tag></template
+              >
             </el-table-column>
             <el-table-column prop="signupStart" label="报名开始" width="160" />
             <el-table-column prop="signupEnd" label="报名截止" width="160" />
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <el-tag :type="{ '报名中': 'success', '即将开始': 'warning', '已结束': 'info' }[row.status]" size="small">{{ row.status }}</el-tag>
+                <el-tag
+                  :type="
+                    { 报名中: 'success', 即将开始: 'warning', 已结束: 'info' }[
+                      row.status
+                    ]
+                  "
+                  size="small"
+                  >{{ row.status }}</el-tag
+                >
               </template>
             </el-table-column>
             <el-table-column label="操作" width="90">
               <template #default="{ row }">
-                <el-button type="danger" size="small" link @click="remove(row)">删除</el-button>
+                <el-button type="danger" size="small" link @click="remove(row)"
+                  >删除</el-button
+                >
               </template>
             </el-table-column>
           </el-table>
@@ -34,7 +53,11 @@
             <el-table-column prop="content" label="内容" min-width="260" />
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <el-tag :type="row.status === '待处理' ? 'warning' : 'success'" size="small">{{ row.status }}</el-tag>
+                <el-tag
+                  :type="row.status === '待处理' ? 'warning' : 'success'"
+                  size="small"
+                  >{{ row.status }}</el-tag
+                >
               </template>
             </el-table-column>
             <el-table-column prop="createTime" label="提交时间" width="170" />
@@ -46,12 +69,19 @@
                   size="small"
                   link
                   @click="handleFeedback(row)"
-                >标记已处理</el-button>
-                <span v-else style="color: #909399; font-size: 12px">已处理</span>
+                  >标记已处理</el-button
+                >
+                <span v-else style="color: #909399; font-size: 12px"
+                  >已处理</span
+                >
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="!feedbacks.length" description="暂无反馈" :image-size="60" />
+          <el-empty
+            v-if="!feedbacks.length"
+            description="暂无反馈"
+            :image-size="60"
+          />
           <el-pagination
             v-if="fbTotal > fbPageSize"
             layout="prev, pager, next, total"
@@ -71,7 +101,11 @@
             <el-table-column prop="detail" label="详情" min-width="220" />
             <el-table-column prop="createTime" label="时间" width="170" />
           </el-table>
-          <el-empty v-if="!logs.length" description="暂无操作日志" :image-size="60" />
+          <el-empty
+            v-if="!logs.length"
+            description="暂无操作日志"
+            :image-size="60"
+          />
           <el-pagination
             v-if="logTotal > logPageSize"
             layout="prev, pager, next, total"
@@ -85,7 +119,11 @@
 
         <el-tab-pane label="成果审核" name="achievement">
           <div style="margin-bottom: 12px">
-            <el-radio-group v-model="achStatus" size="small" @change="loadAchievements">
+            <el-radio-group
+              v-model="achStatus"
+              size="small"
+              @change="loadAchievements"
+            >
               <el-radio-button label="待审核">待审核</el-radio-button>
               <el-radio-button label="已通过">已通过</el-radio-button>
               <el-radio-button label="已拒绝">已拒绝</el-radio-button>
@@ -99,20 +137,49 @@
             <el-table-column prop="award" label="获奖情况" min-width="110" />
             <el-table-column label="证明" width="90">
               <template #default="{ row }">
-                <el-link type="primary" :href="row.proof" target="_blank" :underline="false">查看</el-link>
+                <el-link
+                  type="primary"
+                  :href="row.proof"
+                  target="_blank"
+                  :underline="false"
+                  >查看</el-link
+                >
               </template>
             </el-table-column>
             <el-table-column label="操作" width="150">
               <template #default="{ row }">
                 <template v-if="row.status === '待审核'">
-                  <el-button type="success" size="small" link @click="reviewAchievement(row, 'approve')">通过</el-button>
-                  <el-button type="danger" size="small" link @click="reviewAchievement(row, 'reject')">拒绝</el-button>
+                  <el-button
+                    type="success"
+                    size="small"
+                    link
+                    @click="reviewAchievement(row, 'approve')"
+                    >通过</el-button
+                  >
+                  <el-button
+                    type="danger"
+                    size="small"
+                    link
+                    @click="reviewAchievement(row, 'reject')"
+                    >拒绝</el-button
+                  >
                 </template>
-                <el-button v-else type="danger" size="small" link @click="removeAchievement(row)">删除</el-button>
+                <el-button
+                  v-else
+                  type="danger"
+                  size="small"
+                  link
+                  @click="removeAchievement(row)"
+                  >删除</el-button
+                >
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="!achList.length" description="暂无成果" :image-size="60" />
+          <el-empty
+            v-if="!achList.length"
+            description="暂无成果"
+            :image-size="60"
+          />
           <el-pagination
             v-if="achTotal > achPageSize"
             layout="prev, pager, next, total"
@@ -126,27 +193,57 @@
 
         <el-tab-pane label="训练资源" name="training">
           <div style="margin-bottom: 12px">
-            <el-button type="primary" size="small" @click="openSiteAdd">＋ 新增训练资源</el-button>
-            <el-input v-model="siteKeyword" placeholder="搜索资源名" clearable style="width: 200px; margin-left: 10px" @keyup.enter="loadSites" />
+            <el-button type="primary" size="small" @click="openSiteAdd"
+              >＋ 新增训练资源</el-button
+            >
+            <el-input
+              v-model="siteKeyword"
+              placeholder="搜索资源名"
+              clearable
+              style="width: 200px; margin-left: 10px"
+              @keyup.enter="loadSites"
+            />
           </div>
           <el-table :data="sites" size="small" v-loading="siteLoading">
             <el-table-column prop="name" label="资源名" min-width="150" />
             <el-table-column label="直达" width="80">
               <template #default="{ row }">
-                <el-link type="primary" :href="row.url" target="_blank" :underline="false">打开</el-link>
+                <el-link
+                  type="primary"
+                  :href="row.url"
+                  target="_blank"
+                  :underline="false"
+                  >打开</el-link
+                >
               </template>
             </el-table-column>
             <el-table-column prop="competition" label="竞赛" width="90" />
             <el-table-column prop="tags" label="标签" width="130" />
             <el-table-column prop="difficulty" label="难度" width="80" />
             <el-table-column label="推荐" width="70">
-              <template #default="{ row }">{{ row.recommended ? '★' : '' }}</template>
+              <template #default="{ row }"
+                ><el-tag v-if="row.recommended" size="small" type="success"
+                  >推荐</el-tag
+                ><span v-else>—</span></template
+              >
             </el-table-column>
             <el-table-column prop="status" label="状态" width="70" />
             <el-table-column label="操作" width="130">
               <template #default="{ row }">
-                <el-button type="primary" size="small" link @click="openSiteEdit(row)">编辑</el-button>
-                <el-button type="danger" size="small" link @click="removeSite(row)">删除</el-button>
+                <el-button
+                  type="primary"
+                  size="small"
+                  link
+                  @click="openSiteEdit(row)"
+                  >编辑</el-button
+                >
+                <el-button
+                  type="danger"
+                  size="small"
+                  link
+                  @click="removeSite(row)"
+                  >删除</el-button
+                >
               </template>
             </el-table-column>
           </el-table>
@@ -165,50 +262,107 @@
 
     <el-dialog v-model="addVisible" title="新增竞赛" width="520px">
       <el-form :model="form" label-width="80px">
-        <el-form-item label="名称" required><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="主办方"><el-input v-model="form.organizer" /></el-form-item>
+        <el-form-item label="名称" required
+          ><el-input v-model="form.name"
+        /></el-form-item>
+        <el-form-item label="主办方"
+          ><el-input v-model="form.organizer"
+        /></el-form-item>
         <el-form-item label="级别">
           <el-select v-model="form.level" style="width: 100%">
             <el-option v-for="l in LEVELS" :key="l" :label="l" :value="l" />
           </el-select>
         </el-form-item>
-        <el-form-item label="报名开始"><el-date-picker v-model="form.signupStart" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" /></el-form-item>
-        <el-form-item label="报名截止"><el-date-picker v-model="form.signupEnd" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" /></el-form-item>
-        <el-form-item label="比赛时间"><el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" /></el-form-item>
-        <el-form-item label="简介"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="报名开始"
+          ><el-date-picker
+            v-model="form.signupStart"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+        /></el-form-item>
+        <el-form-item label="报名截止"
+          ><el-date-picker
+            v-model="form.signupEnd"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+        /></el-form-item>
+        <el-form-item label="比赛时间"
+          ><el-date-picker
+            v-model="form.startTime"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+        /></el-form-item>
+        <el-form-item label="简介"
+          ><el-input v-model="form.description" type="textarea" :rows="3"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="addVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="doAdd">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="doAdd"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
-    <el-dialog v-model="siteVisible" :title="siteForm.id ? '编辑训练资源' : '新增训练资源'" width="520px">
+    <el-dialog
+      v-model="siteVisible"
+      :title="siteForm.id ? '编辑训练资源' : '新增训练资源'"
+      width="520px"
+    >
       <el-form :model="siteForm" label-width="80px">
-        <el-form-item label="资源名" required><el-input v-model="siteForm.name" placeholder="如：力扣 LeetCode" /></el-form-item>
-        <el-form-item label="链接" required><el-input v-model="siteForm.url" placeholder="https://..." /></el-form-item>
+        <el-form-item label="资源名" required
+          ><el-input v-model="siteForm.name" placeholder="如：力扣 LeetCode"
+        /></el-form-item>
+        <el-form-item label="链接" required
+          ><el-input v-model="siteForm.url" placeholder="https://..."
+        /></el-form-item>
         <el-form-item label="所属竞赛">
           <el-select v-model="siteForm.competition" style="width: 100%">
-            <el-option v-for="c in TRAINING_COMPETITIONS" :key="c" :label="c" :value="c" />
+            <el-option
+              v-for="c in TRAINING_COMPETITIONS"
+              :key="c"
+              :label="c"
+              :value="c"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="技能标签">
-          <el-input v-model="siteForm.tags" placeholder="逗号分隔，如：算法,数据结构" />
+          <el-input
+            v-model="siteForm.tags"
+            placeholder="逗号分隔，如：算法,数据结构"
+          />
         </el-form-item>
         <el-form-item label="难度">
           <el-select v-model="siteForm.difficulty" style="width: 100%">
-            <el-option v-for="d in TRAINING_DIFFICULTY" :key="d" :label="d" :value="d" />
+            <el-option
+              v-for="d in TRAINING_DIFFICULTY"
+              :key="d"
+              :label="d"
+              :value="d"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="简介"><el-input v-model="siteForm.description" type="textarea" :rows="2" /></el-form-item>
-        <el-form-item label="推荐"><el-switch v-model="siteForm.recommended" /></el-form-item>
+        <el-form-item label="简介"
+          ><el-input v-model="siteForm.description" type="textarea" :rows="2"
+        /></el-form-item>
+        <el-form-item label="推荐"
+          ><el-switch v-model="siteForm.recommended"
+        /></el-form-item>
         <el-form-item label="状态">
-          <el-switch v-model="siteForm.status" active-value="启用" inactive-value="停用" />
+          <el-switch
+            v-model="siteForm.status"
+            active-value="启用"
+            inactive-value="停用"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="siteVisible = false">取消</el-button>
-        <el-button type="primary" :loading="siteSaving" @click="saveSite">保存</el-button>
+        <el-button type="primary" :loading="siteSaving" @click="saveSite"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -218,7 +372,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
-import { LEVELS, TRAINING_COMPETITIONS, TRAINING_DIFFICULTY } from '../utils/constants'
+import {
+  LEVELS,
+  TRAINING_COMPETITIONS,
+  TRAINING_DIFFICULTY
+} from '../utils/constants'
 
 const tab = ref('competition')
 const list = ref([])
@@ -250,7 +408,17 @@ const siteTotal = ref(0)
 const siteKeyword = ref('')
 const siteVisible = ref(false)
 const siteSaving = ref(false)
-const siteForm = reactive({ id: null, name: '', url: '', competition: '通用', tags: '', difficulty: '入门', description: '', recommended: false, status: '启用' })
+const siteForm = reactive({
+  id: null,
+  name: '',
+  url: '',
+  competition: '通用',
+  tags: '',
+  difficulty: '入门',
+  description: '',
+  recommended: false,
+  status: '启用'
+})
 const form = reactive({
   name: '',
   organizer: '',
@@ -273,7 +441,9 @@ async function load() {
 async function loadFeedback() {
   fbLoading.value = true
   try {
-    const data = await api.get('/feedback', { params: { page: fbPage.value, size: fbPageSize } })
+    const data = await api.get('/feedback', {
+      params: { page: fbPage.value, size: fbPageSize }
+    })
     feedbacks.value = data.records || []
     fbTotal.value = data.total || 0
   } finally {
@@ -289,7 +459,9 @@ function onFbPageChange(p) {
 async function loadLogs() {
   logLoading.value = true
   try {
-    const data = await api.get('/admin/logs', { params: { page: logPage.value, size: logPageSize } })
+    const data = await api.get('/admin/logs', {
+      params: { page: logPage.value, size: logPageSize }
+    })
     logs.value = data.records || []
     logTotal.value = data.total || 0
   } finally {
@@ -306,7 +478,11 @@ async function loadAchievements() {
   achLoading.value = true
   try {
     const data = await api.get('/achievements/admin', {
-      params: { status: achStatus.value, page: achPage.value, size: achPageSize }
+      params: {
+        status: achStatus.value,
+        page: achPage.value,
+        size: achPageSize
+      }
     })
     achList.value = data.records || []
     achTotal.value = data.total || 0
@@ -332,7 +508,9 @@ async function reviewAchievement(row, action) {
 }
 
 async function removeAchievement(row) {
-  await ElMessageBox.confirm(`确定删除成果「${row.name}」吗？`, '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm(`确定删除成果「${row.name}」吗？`, '删除确认', {
+    type: 'warning'
+  })
   await api.delete(`/achievements/${row.id}`)
   ElMessage.success('已删除')
   loadAchievements()
@@ -357,14 +535,20 @@ async function doAdd() {
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(`确定删除竞赛「${row.name}」吗？`, '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm(`确定删除竞赛「${row.name}」吗？`, '删除确认', {
+    type: 'warning'
+  })
   await api.delete(`/competitions/${row.id}`)
   ElMessage.success('已删除')
   load()
 }
 
 async function handleFeedback(row) {
-  await ElMessageBox.confirm(`确认将「${row.content.slice(0, 20)}...」标记为已处理吗？`, '处理反馈', { type: 'info' })
+  await ElMessageBox.confirm(
+    `确认将「${row.content.slice(0, 20)}...」标记为已处理吗？`,
+    '处理反馈',
+    { type: 'info' }
+  )
   await api.post(`/feedback/${row.id}/handle`)
   ElMessage.success('已标记为处理完成')
   loadFeedback()
@@ -375,7 +559,11 @@ async function loadSites() {
   siteLoading.value = true
   try {
     const data = await api.get('/training/admin/sites', {
-      params: { keyword: siteKeyword.value, page: sitePage.value, size: sitePageSize }
+      params: {
+        keyword: siteKeyword.value,
+        page: sitePage.value,
+        size: sitePageSize
+      }
     })
     sites.value = data.records || []
     siteTotal.value = data.total || 0
@@ -390,15 +578,31 @@ function onSitePageChange(p) {
 }
 
 function openSiteAdd() {
-  Object.assign(siteForm, { id: null, name: '', url: '', competition: '通用', tags: '', difficulty: '入门', description: '', recommended: false, status: '启用' })
+  Object.assign(siteForm, {
+    id: null,
+    name: '',
+    url: '',
+    competition: '通用',
+    tags: '',
+    difficulty: '入门',
+    description: '',
+    recommended: false,
+    status: '启用'
+  })
   siteVisible.value = true
 }
 
 function openSiteEdit(row) {
   Object.assign(siteForm, {
-    id: row.id, name: row.name, url: row.url, competition: row.competition,
-    tags: row.tags, difficulty: row.difficulty, description: row.description,
-    recommended: !!row.recommended, status: row.status
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    competition: row.competition,
+    tags: row.tags,
+    difficulty: row.difficulty,
+    description: row.description,
+    recommended: !!row.recommended,
+    status: row.status
   })
   siteVisible.value = true
 }
@@ -424,7 +628,11 @@ async function saveSite() {
 }
 
 async function removeSite(row) {
-  await ElMessageBox.confirm(`确定删除训练资源「${row.name}」吗？`, '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm(
+    `确定删除训练资源「${row.name}」吗？`,
+    '删除确认',
+    { type: 'warning' }
+  )
   await api.delete(`/training/admin/sites/${row.id}`)
   ElMessage.success('已删除')
   loadSites()

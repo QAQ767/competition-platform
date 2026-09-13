@@ -1,7 +1,9 @@
 <template>
   <div class="chat-page">
     <el-card shadow="never" class="conv-card">
-      <template #header>💬 会话列表</template>
+      <template #header
+        ><UiLabel icon="ChatDotRound">会话列表</UiLabel></template
+      >
       <div v-if="!convs.length" class="conv-empty">
         暂无会话<br />
         <span style="font-size: 12px; color: #909399"
@@ -54,17 +56,18 @@
       <div v-if="!currentId" class="conv-empty">从左侧选择一个会话开始聊天</div>
       <div v-else class="msg-list" ref="msgListRef">
         <div v-if="!dmLoadedAll" class="msg-load-more" @click="loadEarlierDm">
-          ⏫ 加载更早消息
+          <el-icon class="text-icon" aria-hidden="true"><ArrowUp /></el-icon
+          >加载更早消息
         </div>
         <div
           v-for="m in messages"
           :key="m.id"
           class="msg-row"
-          :class="{ mine: m.userId === store.user.id }"
+          :class="{ mine: m.userId === store.user?.id }"
         >
           <div class="msg-bubble">{{ m.content }}</div>
           <div class="msg-meta">
-            <template v-if="m.userId === store.user.id">我</template>
+            <template v-if="m.userId === store.user?.id">我</template>
             <span
               v-else
               class="name-link"

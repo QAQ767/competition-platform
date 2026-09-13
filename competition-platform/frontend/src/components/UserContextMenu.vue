@@ -1,17 +1,36 @@
 <template>
   <teleport to="body">
     <!-- 全局右键菜单：查看主页 / 私聊 / 关注 / 邀请组队 -->
-    <div v-if="state.visible" class="uctx-overlay" @click="close" @contextmenu.prevent="close"></div>
-    <div v-if="state.visible" class="uctx-menu" :style="{ left: state.x + 'px', top: state.y + 'px' }">
+    <div
+      v-if="state.visible"
+      class="uctx-overlay"
+      @click="close"
+      @contextmenu.prevent="close"
+    ></div>
+    <div
+      v-if="state.visible"
+      class="uctx-menu"
+      :style="{ left: state.x + 'px', top: state.y + 'px' }"
+    >
       <div class="uctx-title">
         <div class="uctx-nick">{{ state.userName || '用户' }}</div>
         <div class="uctx-user">用户名：{{ state.username || '—' }}</div>
       </div>
-      <div class="uctx-item" @click="goHome">📄 查看主页</div>
-      <div class="uctx-item" @click="dm">💬 私聊</div>
-      <div class="uctx-item" @click="follow">➕ 关注</div>
+      <div class="uctx-item" @click="goHome">
+        <el-icon class="text-icon" aria-hidden="true"><Document /></el-icon>
+        查看主页
+      </div>
+      <div class="uctx-item" @click="dm">
+        <el-icon class="text-icon" aria-hidden="true"><ChatDotRound /></el-icon>
+        私聊
+      </div>
+      <div class="uctx-item" @click="follow">
+        <el-icon class="text-icon" aria-hidden="true"><Plus /></el-icon> 关注
+      </div>
       <div class="uctx-divider"></div>
-      <div class="uctx-item" @click="openInviteDialog">🎯 邀请组队</div>
+      <div class="uctx-item" @click="openInviteDialog">
+        <el-icon class="text-icon" aria-hidden="true"><Aim /></el-icon> 邀请组队
+      </div>
     </div>
   </teleport>
 
@@ -19,19 +38,35 @@
   <el-dialog v-model="inviteVisible" title="邀请组队" width="440px">
     <p v-if="!store.isLogin" style="margin: 0">请先登录后再邀请他人组队</p>
     <template v-else>
-      <p style="margin-top: 0">邀请 <b>{{ state.userName || '该用户' }}</b> 加入你的队伍：</p>
+      <p style="margin-top: 0">
+        邀请 <b>{{ state.userName || '该用户' }}</b> 加入你的队伍：
+      </p>
       <div v-if="!captainTeams.length" style="color: #909399; font-size: 13px">
         你还没有可以邀请的队伍（需要是该队队长且队伍未满员）。
       </div>
-      <el-radio-group v-model="chosenTeamId" style="display: flex; flex-direction: column; gap: 8px">
-        <el-radio v-for="t in captainTeams" :key="t.id" :value="t.id" style="margin-right: 0">
+      <el-radio-group
+        v-model="chosenTeamId"
+        style="display: flex; flex-direction: column; gap: 8px"
+      >
+        <el-radio
+          v-for="t in captainTeams"
+          :key="t.id"
+          :value="t.id"
+          style="margin-right: 0"
+        >
           {{ t.title }}（{{ t.memberCount }}/{{ t.maxMembers }}）
         </el-radio>
       </el-radio-group>
     </template>
     <template #footer>
       <el-button @click="inviteVisible = false">取消</el-button>
-      <el-button type="primary" :loading="inviting" :disabled="!chosenTeamId" @click="doInvite">发送邀请</el-button>
+      <el-button
+        type="primary"
+        :loading="inviting"
+        :disabled="!chosenTeamId"
+        @click="doInvite"
+        >发送邀请</el-button
+      >
     </template>
   </el-dialog>
 </template>
@@ -107,7 +142,10 @@ async function openInviteDialog() {
   try {
     const teams = await api.get('/user/me/teams')
     captainTeams.value = (teams || []).filter(
-      (t) => t.captainId === store.user?.id && t.memberCount < t.maxMembers && t.status !== '已满员'
+      (t) =>
+        t.captainId === store.user?.id &&
+        t.memberCount < t.maxMembers &&
+        t.status !== '已满员'
     )
     if (captainTeams.value.length === 1) {
       chosenTeamId.value = captainTeams.value[0].id
@@ -119,13 +157,16 @@ async function openInviteDialog() {
 }
 
 async function doInvite() {
+  if (inviting.value) return
   if (!chosenTeamId.value) {
     ElMessage.warning('请选择一个队伍')
     return
   }
   inviting.value = true
   try {
-    await api.post(`/teams/${chosenTeamId.value}/invite`, { userId: state.userId })
+    await api.post(`/teams/${chosenTeamId.value}/invite`, {
+      userId: state.userId
+    })
     ElMessage.success(`已向 ${state.userName || '对方'} 发送入队邀请`)
     inviteVisible.value = false
   } catch (e) {

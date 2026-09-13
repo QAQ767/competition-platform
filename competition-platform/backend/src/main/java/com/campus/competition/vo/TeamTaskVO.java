@@ -21,6 +21,36 @@ public class TeamTaskVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
+    private String phase;
+    private String priority;
+    private Long resourceId;
+    private String completionNote;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime completedAt;
+    private String resourceName;
+    private String resourceUrl;
+
+    public String getPhase() { return phase; }
+    public void setPhase(String phase) { this.phase = phase; }
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
+
+    public Long getResourceId() { return resourceId; }
+    public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+
+    public String getCompletionNote() { return completionNote; }
+    public void setCompletionNote(String completionNote) { this.completionNote = completionNote; }
+
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+    public String getResourceName() { return resourceName; }
+    public void setResourceName(String resourceName) { this.resourceName = resourceName; }
+
+    public String getResourceUrl() { return resourceUrl; }
+    public void setResourceUrl(String resourceUrl) { this.resourceUrl = resourceUrl; }
+
     public Long getId() {
         return id;
     }

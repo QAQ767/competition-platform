@@ -23,6 +23,16 @@ public class Notification {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
+    private Long inviteId;
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String inviteStatus;
+
+    public Long getInviteId() { return inviteId; }
+    public void setInviteId(Long inviteId) { this.inviteId = inviteId; }
+
+    public String getInviteStatus() { return inviteStatus; }
+    public void setInviteStatus(String inviteStatus) { this.inviteStatus = inviteStatus; }
+
     public Long getId() {
         return id;
     }

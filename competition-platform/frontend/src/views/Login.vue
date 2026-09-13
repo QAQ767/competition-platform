@@ -99,11 +99,22 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
+const route = useRoute()
+function afterLogin() {
+  const target = route.query.redirect
+  const safe =
+    typeof target === 'string' &&
+    target.startsWith('/') &&
+    !target.startsWith('//') &&
+    !target.startsWith('/login') &&
+    router.resolve(target).matched.length
+  return router.replace(safe ? target : '/')
+}
 const store = useUserStore()
 
 const tab = ref('login')
@@ -118,6 +129,7 @@ const regForm = ref({
 })
 
 async function doLogin() {
+  if (loading.value) return
   if (!loginForm.value.username || !loginForm.value.password) {
     ElMessage.warning('请输入用户名和密码')
     return
@@ -126,13 +138,16 @@ async function doLogin() {
   try {
     await store.login(loginForm.value)
     ElMessage.success('登录成功')
-    router.push('/')
+    afterLogin()
+  } catch {
+    // 接口层已提示错误，保留表单供用户重试。
   } finally {
     loading.value = false
   }
 }
 
 async function doRegister() {
+  if (loading.value) return
   if (!regForm.value.username || !regForm.value.password) {
     ElMessage.warning('用户名和密码不能为空')
     return
@@ -141,7 +156,9 @@ async function doRegister() {
   try {
     await store.register(regForm.value)
     ElMessage.success('注册成功，已自动登录')
-    router.push('/')
+    afterLogin()
+  } catch {
+    // 注册失败时保留已填写的信息。
   } finally {
     loading.value = false
   }

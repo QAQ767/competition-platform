@@ -45,9 +45,13 @@
         placeholder="搜索队伍标题"
         clearable
         style="width: 200px; margin-left: 10px"
-        @keyup.enter="load"
+        @keyup.enter="onFilterChange"
+        @clear="onFilterChange"
       />
-      <el-button type="primary" style="margin-left: 10px" @click="load"
+      <el-button
+        type="primary"
+        style="margin-left: 10px"
+        @click="onFilterChange"
         >查询</el-button
       >
       <el-button
@@ -152,7 +156,8 @@
           class="hall-load-more"
           @click="loadHallEarlier"
         >
-          ⏫ 加载更早消息
+          <el-icon class="text-icon" aria-hidden="true"><ArrowUp /></el-icon
+          >加载更早消息
         </div>
         <div v-for="m in hallMsgs" :key="m.id" class="hall-msg">
           <span
@@ -403,6 +408,7 @@ function openApply(t) {
 }
 
 async function doApply() {
+  if (applying.value) return
   applying.value = true
   try {
     await api.post(`/teams/${applyTeam.value.id}/apply`, {
@@ -410,20 +416,29 @@ async function doApply() {
     })
     ElMessage.success('申请已提交，等待队长审批')
     applyVisible.value = false
+  } catch {
+    // 保留申请内容，方便重试。
   } finally {
     applying.value = false
   }
 }
 
+let teamRequestId = 0
 async function load() {
+  const requestId = ++teamRequestId
   const params = { page: teamsPage.value, size: teamsPageSize }
   if (filters.competitionId) params.competitionId = filters.competitionId
   if (filters.skill) params.skill = filters.skill
   if (filters.status) params.status = filters.status
   if (filters.keyword) params.keyword = filters.keyword
-  const data = await api.get('/teams', { params })
-  teams.value = data.records || []
-  teamsTotal.value = data.total || 0
+  try {
+    const data = await api.get('/teams', { params })
+    if (requestId !== teamRequestId) return
+    teams.value = data.records || []
+    teamsTotal.value = data.total || 0
+  } catch {
+    /* 接口层已提示，保留原列表 */
+  }
 }
 
 function onTeamPageChange(page) {
@@ -455,6 +470,7 @@ function openCreate() {
 }
 
 async function doCreate() {
+  if (creating.value) return
   if (!createForm.competitionId || !createForm.title) {
     ElMessage.warning('请填写竞赛和标题')
     return
@@ -465,6 +481,8 @@ async function doCreate() {
     ElMessage.success('创建成功！去看看 AI 推荐的队友吧')
     createVisible.value = false
     router.push(`/teams/${team.id}`)
+  } catch {
+    // 接口层提示错误，保留创建表单。
   } finally {
     creating.value = false
   }

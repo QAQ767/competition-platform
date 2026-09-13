@@ -72,7 +72,9 @@
                     :aria-pressed="favoriteIds.has(s.id)"
                     @click="toggleFavorite(s)"
                   >
-                    {{ favoriteIds.has(s.id) ? '★' : '☆' }}
+                    <el-icon aria-hidden="true"
+                      ><StarFilled v-if="favoriteIds.has(s.id)" /><Star v-else
+                    /></el-icon>
                   </button>
                 </div>
                 <div class="site-tags">
@@ -95,7 +97,7 @@
                     size="small"
                     type="danger"
                     effect="dark"
-                    >★ 推荐</el-tag
+                    >推荐</el-tag
                   >
                 </div>
                 <div class="site-desc">{{ s.description }}</div>
@@ -135,9 +137,10 @@
                 :type="checkin.checkedToday ? 'success' : 'primary'"
                 size="large"
                 :disabled="checkin.checkedToday"
+                :loading="submittingCheckin"
                 @click="doCheckin"
                 >{{
-                  checkin.checkedToday ? '✓ 今日已打卡' : '一键打卡'
+                  checkin.checkedToday ? '今日已打卡' : '一键打卡'
                 }}</el-button
               >
               <div class="checkin-stats">
@@ -167,7 +170,7 @@
                     checkin.nextLevel
                   }}」</span
                 >
-                <span v-else class="next-level">已达最高等级 🏆</span>
+                <span v-else class="next-level">已达最高等级</span>
               </div>
               <el-alert
                 v-if="!store.isLogin"
@@ -277,7 +280,7 @@
                       :aria-label="'取消收藏' + s.name"
                       @click="unfavorite(s)"
                     >
-                      ★
+                      <el-icon aria-hidden="true"><StarFilled /></el-icon>
                     </button>
                   </div>
                   <div class="site-tags">
@@ -420,6 +423,7 @@ const checkin = reactive({
   monthDates: []
 })
 const loadingCheckin = ref(false)
+const submittingCheckin = ref(false)
 
 const calTitle = computed(() => {
   const now = new Date()
@@ -456,13 +460,18 @@ async function loadCheckin() {
 }
 
 async function doCheckin() {
-  if (!store.isLogin) {
-    ElMessage.warning('请先登录')
-    return
+  if (submittingCheckin.value || checkin.checkedToday) return
+  if (!store.isLogin) return ElMessage.warning('请先登录')
+  submittingCheckin.value = true
+  try {
+    await api.post('/training/checkin')
+    ElMessage.success('今日训练打卡成功')
+    await loadCheckin()
+  } catch {
+    /* 接口层提示 */
+  } finally {
+    submittingCheckin.value = false
   }
-  await api.post('/training/checkin')
-  ElMessage.success('今日训练打卡成功 ✓')
-  loadCheckin()
 }
 
 // ===== 排行榜 =====

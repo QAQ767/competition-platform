@@ -2,43 +2,103 @@
   <div v-loading="loading">
     <el-card shadow="never" class="block">
       <div class="user-head">
-        <el-avatar :size="64" :src="home?.user?.avatar || undefined">{{ (home?.user?.nickname || '?').charAt(0) }}</el-avatar>
+        <el-avatar :size="64" :src="home?.user?.avatar || undefined">{{
+          (home?.user?.nickname || '?').charAt(0)
+        }}</el-avatar>
         <div class="user-info">
-          <div class="user-name">{{ home?.user?.nickname }}
-            <el-tag v-if="home?.isSelf" size="small" type="info" style="margin-left: 6px">我</el-tag>
+          <div class="user-name">
+            {{ home?.user?.nickname }}
+            <el-tag
+              v-if="home?.isSelf"
+              size="small"
+              type="info"
+              style="margin-left: 6px"
+              >我</el-tag
+            >
           </div>
-          <div class="user-meta">用户名：{{ home?.user?.username }} ｜ {{ home?.user?.college || '—' }} · {{ home?.user?.major || '—' }}</div>
+          <div class="user-meta">
+            用户名：{{ home?.user?.username }} ｜
+            {{ home?.user?.college || '—' }} · {{ home?.user?.major || '—' }}
+          </div>
           <div class="user-meta">简介：{{ home?.user?.intro || '—' }}</div>
-          <div class="user-meta">粉丝 {{ home?.followerCount }} · 关注 {{ home?.followingCount }} ｜ 参赛状态：
-            <el-tag size="small" :type="COMPETE_STATUS[home?.user?.competeStatus]?.type || 'info'">
-              {{ COMPETE_STATUS[home?.user?.competeStatus]?.label || home?.user?.competeStatus }}
+          <div class="user-meta">
+            粉丝 {{ home?.followerCount }} · 关注 {{ home?.followingCount }} ｜
+            参赛状态：
+            <el-tag
+              size="small"
+              :type="COMPETE_STATUS[home?.user?.competeStatus]?.type || 'info'"
+            >
+              {{
+                COMPETE_STATUS[home?.user?.competeStatus]?.label ||
+                home?.user?.competeStatus
+              }}
             </el-tag>
           </div>
         </div>
         <div class="user-actions" v-if="store.isLogin && !home?.isSelf">
-          <el-button v-if="home?.isFollowing" type="info" size="small" plain @click="toggleFollow">已关注</el-button>
-          <el-button v-else type="primary" size="small" @click="toggleFollow">＋ 关注</el-button>
-          <el-button type="success" size="small" @click="goChat">💬 私聊</el-button>
+          <el-button
+            v-if="home?.isFollowing"
+            type="info"
+            size="small"
+            plain
+            @click="toggleFollow"
+            >已关注</el-button
+          >
+          <el-button v-else type="primary" size="small" @click="toggleFollow"
+            >＋ 关注</el-button
+          >
+          <el-button type="success" size="small" @click="goChat"
+            ><el-icon class="text-icon" aria-hidden="true"
+              ><ChatDotRound
+            /></el-icon>
+            私聊</el-button
+          >
         </div>
       </div>
     </el-card>
 
     <el-card shadow="never" class="block">
-      <template #header>🏆 近期获奖记录（已审核通过）</template>
+      <template #header><UiLabel icon="Medal">近期获奖记录</UiLabel></template>
       <el-row :gutter="16">
-        <el-col :span="8" v-for="a in home?.achievements || []" :key="a.id" style="margin-bottom: 16px">
+        <el-col
+          :span="8"
+          v-for="a in home?.achievements || []"
+          :key="a.id"
+          style="margin-bottom: 16px"
+        >
           <el-card shadow="hover">
             <div class="ach-head">
               <span class="ach-name">{{ a.name }}</span>
               <el-tag size="small">{{ a.level }}</el-tag>
             </div>
-            <div class="ach-meta">🏅 {{ a.award }}</div>
-            <div class="ach-meta">🎯 {{ a.competitionName }} · {{ a.awardYear || '—' }}</div>
-            <div class="ach-meta" v-if="a.proof">📄 <el-link type="primary" :href="a.proof" target="_blank" :underline="false">查看证明</el-link></div>
+            <div class="ach-meta">
+              <el-icon class="text-icon" aria-hidden="true"><Medal /></el-icon>
+              {{ a.award }}
+            </div>
+            <div class="ach-meta">
+              <el-icon class="text-icon" aria-hidden="true"><Aim /></el-icon>
+              {{ a.competitionName }} · {{ a.awardYear || '—' }}
+            </div>
+            <div class="ach-meta" v-if="a.proof">
+              <el-icon class="text-icon" aria-hidden="true"
+                ><Document
+              /></el-icon>
+              <el-link
+                type="primary"
+                :href="a.proof"
+                target="_blank"
+                :underline="false"
+                >查看证明</el-link
+              >
+            </div>
           </el-card>
         </el-col>
       </el-row>
-      <el-empty v-if="!home?.achievements?.length" description="暂无获奖记录" :image-size="60" />
+      <el-empty
+        v-if="!home?.achievements?.length"
+        description="暂无获奖记录"
+        :image-size="60"
+      />
     </el-card>
   </div>
 </template>

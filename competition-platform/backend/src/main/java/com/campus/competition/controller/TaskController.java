@@ -4,6 +4,7 @@ import com.campus.competition.common.Result;
 import com.campus.competition.common.UserContext;
 import com.campus.competition.dto.TaskCreateReq;
 import com.campus.competition.dto.TaskStatusReq;
+import com.campus.competition.dto.PreparationPlanReq;
 import com.campus.competition.entity.TeamTask;
 import com.campus.competition.annotation.OpLog;
 import com.campus.competition.service.TeamTaskService;
@@ -47,8 +48,21 @@ public class TaskController {
     @OpLog("更新任务状态")
     @PutMapping("/tasks/{taskId}/status")
     public Result<Void> updateStatus(@PathVariable Long taskId, @Valid @RequestBody TaskStatusReq req) {
-        teamTaskService.updateStatus(taskId, UserContext.getUserId(), req.getStatus());
+        teamTaskService.updateStatus(taskId, UserContext.getUserId(), req.getStatus(), req.getCompletionNote());
         return Result.success();
+    }
+
+    @OpLog("编辑备赛任务")
+    @PutMapping("/tasks/{taskId}")
+    public Result<Void> update(@PathVariable Long taskId, @Valid @RequestBody TaskCreateReq req) {
+        teamTaskService.update(taskId, UserContext.getUserId(), req);
+        return Result.success();
+    }
+
+    @OpLog("生成备赛计划")
+    @PostMapping("/teams/{id}/tasks/plan")
+    public Result<List<TeamTask>> generatePlan(@PathVariable Long id, @RequestBody PreparationPlanReq req) {
+        return Result.success(teamTaskService.generatePlan(id, UserContext.getUserId(), req.getTargetDate()));
     }
 
     @OpLog("删除任务")

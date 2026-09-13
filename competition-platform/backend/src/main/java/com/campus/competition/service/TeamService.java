@@ -263,7 +263,7 @@ public class TeamService {
         application.setApplyTime(LocalDateTime.now());
         teamApplicationMapper.insert(application);
 
-        notificationService.send(targetUserId, "INVITE",
+        notificationService.sendInvite(targetUserId, application.getId(),
                 "队长「" + (captain == null ? "未知" : captain.getNickname())
                         + "」邀请你加入队伍「" + team.getTitle() + "」，点击消息铃铛可接受或拒绝");
     }
@@ -329,6 +329,10 @@ public class TeamService {
             throw new BusinessException("该邀请已处理");
         }
         Team team = requireTeam(application.getTeamId());
+        application = teamApplicationMapper.selectForUpdate(appId);
+        if (application == null || !"待审批".equals(application.getStatus())) {
+            throw new BusinessException("该邀请已处理或已失效");
+        }
         if (team.getMemberCount() >= team.getMaxMembers()) {
             throw new BusinessException("队伍已满员，无法加入");
         }
@@ -357,6 +361,7 @@ public class TeamService {
         }
         teamMapper.updateById(team);
 
+        notificationService.markInviteHandled(appId, userId);
         notificationService.send(team.getCaptainId(), "INVITE_ACCEPTED",
                 application.getUserName() + " 接受了你的邀请，已加入队伍「" + team.getTitle() + "」");
     }
@@ -374,10 +379,14 @@ public class TeamService {
         if (!"待审批".equals(application.getStatus())) {
             throw new BusinessException("该邀请已处理");
         }
+        Team team = requireTeam(application.getTeamId());
+        application = teamApplicationMapper.selectForUpdate(appId);
+        if (application == null || !"待审批".equals(application.getStatus())) {
+            throw new BusinessException("该邀请已处理或已失效");
+        }
         application.setStatus("已拒绝");
         teamApplicationMapper.updateById(application);
-
-        Team team = teamMapper.selectById(application.getTeamId());
+        notificationService.markInviteHandled(appId, userId);
         if (team != null) {
             notificationService.send(team.getCaptainId(), "INVITE_DECLINED",
                     application.getUserName() + " 拒绝了你的入队邀请（队伍「" + team.getTitle() + "」）");
@@ -554,7 +563,7 @@ public class TeamService {
     }
 
     private Team requireTeam(Long teamId) {
-        Team team = teamMapper.selectById(teamId);
+        Team team = teamMapper.selectForUpdate(teamId);
         if (team == null) {
             throw new BusinessException("队伍不存在");
         }

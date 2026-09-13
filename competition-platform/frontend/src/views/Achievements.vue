@@ -8,7 +8,7 @@
     <el-card shadow="never" class="block">
       <template #header>
         <div class="card-head">
-          <span>🏆 成果墙（获奖展示）</span>
+          <span><UiLabel icon="Trophy">荣誉成果</UiLabel></span>
           <el-button
             v-if="store.isLogin"
             type="primary"
@@ -34,12 +34,18 @@
                 a.level
               }}</el-tag>
             </div>
-            <div class="ach-meta">🏅 {{ a.award }}</div>
             <div class="ach-meta">
-              🎯 {{ a.competitionName }} · {{ a.awardYear || '—' }}
+              <el-icon class="text-icon" aria-hidden="true"><Medal /></el-icon>
+              {{ a.award }}
+            </div>
+            <div class="ach-meta">
+              <el-icon class="text-icon" aria-hidden="true"><Aim /></el-icon>
+              {{ a.competitionName }} · {{ a.awardYear || '—' }}
             </div>
             <div class="ach-meta" v-if="a.proof">
-              📄
+              <el-icon class="text-icon" aria-hidden="true"
+                ><Document
+              /></el-icon>
               <el-link
                 type="primary"
                 :href="a.proof"
@@ -54,13 +60,19 @@
                   v-if="a.teamName && a.teamId"
                   class="ach-link"
                   @click="$router.push(`/teams/${a.teamId}`)"
-                  >🏆 {{ a.teamName }}</span
+                  ><el-icon class="text-icon" aria-hidden="true"
+                    ><Trophy
+                  /></el-icon>
+                  {{ a.teamName }}</span
                 >
                 <template v-if="a.teamName && a.userName"> · </template>
                 <span
                   class="ach-link"
                   @click="$router.push(`/users/${a.userId}`)"
-                  >👤 {{ a.userName }}</span
+                  ><el-icon class="text-icon" aria-hidden="true"
+                    ><User
+                  /></el-icon>
+                  {{ a.userName }}</span
                 >
                 <span> · {{ a.createdAt }}</span>
               </span>
@@ -89,7 +101,9 @@
     </el-card>
 
     <el-card v-if="store.isLogin" shadow="never" class="block">
-      <template #header>📋 我的成果（审核状态）</template>
+      <template #header
+        ><UiLabel icon="DocumentChecked">我的成果 · 审核进度</UiLabel></template
+      >
       <el-table :data="myList" size="small" v-loading="myLoading">
         <el-table-column prop="name" label="成果名称" min-width="180" />
         <el-table-column label="所在队伍" width="150">
@@ -170,7 +184,7 @@
             placeholder="选择获奖队伍或个人奖项"
             style="width: 100%"
           >
-            <el-option :value="null" label="🎖️ 个人奖项（不关联队伍）" />
+            <el-option :value="null" label="个人奖项（不关联队伍）" />
             <el-option
               v-for="t in myTeams"
               :key="t.id"
@@ -200,7 +214,7 @@
             :before-upload="beforeProof"
           >
             <el-button size="small" :loading="proofUploading">{{
-              form.proof ? '✅ 已上传，点击重新上传' : '＋ 上传证明（图片/PDF）'
+              form.proof ? '已上传，点击重新上传' : '＋ 上传证明（图片/PDF）'
             }}</el-button>
           </el-upload>
         </el-form-item>

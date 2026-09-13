@@ -56,6 +56,12 @@ class TeamServiceTest {
         competitionMapper = mock(CompetitionMapper.class);
         userMapper = mock(UserMapper.class);
         notificationService = mock(NotificationService.class);
+        when(teamMapper.selectForUpdate(any())).thenAnswer(invocation -> teamMapper.selectById((Long) invocation.getArgument(0)));
+        when(teamApplicationMapper.selectForUpdate(any())).thenAnswer(invocation -> teamApplicationMapper.selectById((Long) invocation.getArgument(0)));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            ((TeamApplication) invocation.getArgument(0)).setId(99L);
+            return 1;
+        }).when(teamApplicationMapper).insert(any(TeamApplication.class));
         teamService = new TeamService(teamMapper, teamMemberMapper, teamApplicationMapper,
                 teamExitLogMapper, competitionMapper, userMapper, notificationService);
 
@@ -91,7 +97,7 @@ class TeamServiceTest {
         teamService.invite(1L, 2L, 1L);
 
         verify(teamApplicationMapper).insert(any(TeamApplication.class));
-        verify(notificationService).send(eq(2L), eq("INVITE"), any(String.class));
+        verify(notificationService).sendInvite(eq(2L), eq(99L), any(String.class));
     }
 
     @Test

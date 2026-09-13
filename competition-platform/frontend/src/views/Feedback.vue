@@ -6,7 +6,7 @@
       eyebrow="WE ARE LISTENING"
     />
     <el-card shadow="never">
-      <template #header>📮 反馈提交（想参加的平台没有？告诉我们！）</template>
+      <template #header><UiLabel icon="Message">提交反馈</UiLabel></template>
       <el-form :model="form" label-width="80px" style="max-width: 620px">
         <el-form-item label="反馈类型">
           <el-select v-model="form.type" style="width: 100%">
