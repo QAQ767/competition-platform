@@ -14,6 +14,7 @@ frontend/.vite/
 # ===== 运行数据 =====
 backend/data/
 backend/uploads/
+competition-platform/backend/uploads/
 
 # ===== 环境与密钥（勿提交）=====
 .env

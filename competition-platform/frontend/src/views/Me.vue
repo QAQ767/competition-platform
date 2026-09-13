@@ -16,18 +16,7 @@
         <el-avatar :size="72" :src="store.user?.avatar || undefined">{{
           (store.user?.nickname || '?').charAt(0)
         }}</el-avatar>
-        <div class="avatar-actions">
-          <el-upload
-            :show-file-list="false"
-            :http-request="uploadAvatar"
-            :before-upload="beforeAvatar"
-          >
-            <el-button size="small" :loading="avatarUploading"
-              >上传头像</el-button
-            >
-          </el-upload>
-          <div class="avatar-tip">支持图片，≤20MB</div>
-        </div>
+        <AvatarUploader />
       </div>
       <el-descriptions :column="2" size="small">
         <el-descriptions-item label="昵称">{{
@@ -287,6 +276,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
 import UserConnections from '../components/UserConnections.vue'
+import AvatarUploader from '../components/AvatarUploader.vue'
 import {
   COMPETE_STATUS,
   TEAM_STATUS_TYPE,
@@ -301,7 +291,6 @@ const myApplications = ref([])
 const inviteBusy = ref(new Set())
 const editVisible = ref(false)
 const saving = ref(false)
-const avatarUploading = ref(false)
 const editForm = reactive({
   nickname: '',
   college: '',
@@ -344,34 +333,6 @@ const statusDesc = {
   ACCEPT_INVITE: '有空位就拉我，我随叫随到',
   NOT_PARTICIPATE: '暂时不参赛，别推荐我',
   ONLY_VIEW: '只看看，不想被打扰'
-}
-
-function beforeAvatar(file) {
-  if (!file.type.startsWith('image/')) {
-    ElMessage.warning('请上传图片文件')
-    return false
-  }
-  if (file.size > 20 * 1024 * 1024) {
-    ElMessage.warning('文件不能超过 20MB')
-    return false
-  }
-  return true
-}
-
-async function uploadAvatar({ file }) {
-  avatarUploading.value = true
-  try {
-    const fd = new FormData()
-    fd.append('file', file)
-    const data = await api.post('/files/upload', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-    const user = await api.put('/user/profile', { avatar: data.url })
-    store.setUser(user)
-    ElMessage.success('头像已更新')
-  } finally {
-    avatarUploading.value = false
-  }
 }
 
 async function load() {
@@ -471,15 +432,6 @@ onMounted(load)
   align-items: center;
   gap: 16px;
   margin-bottom: 16px;
-}
-.avatar-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.avatar-tip {
-  font-size: 12px;
-  color: #909399;
 }
 .card-head {
   display: flex;
