@@ -48,10 +48,22 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 ### 用户 User
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|
-| PUT | /user/profile | {nickname,intro,avatar,college,major} | user（更新后） |
+| PUT | /user/profile | {nickname,intro,avatar,college,major,email}（字段可选） | user（更新后的完整资料） |
 | PUT | /user/compete-status | {competeStatus} | user |
 | GET | /user/me/teams | — | [Team]（我创建的 + 我加入的） |
 | GET | /user/me/applications | — | [TeamApplication]（我发出的申请） |
+
+资料更新仅作用于当前登录用户；未提交或为 `null` 的字段保持原值。邮箱会去除首尾空格，非空时校验邮箱格式及最长 100 字符，传 `email: ""` 可清空邮箱。只上传头像不会清空其他资料。
+
+### 关注与粉丝
+| 方法 | 路径 | 请求 | 返回 data |
+|---|---|---|---|
+| GET | /users/me/following | — | [User]（我关注的人，按关注时间倒序） |
+| GET | /users/me/followers | — | [User]（关注我的人，按关注时间倒序） |
+| POST | /users/{id}/follow | — | —（关注或回关，重复请求不新增记录） |
+| DELETE | /users/{id}/follow | — | —（取消我对该用户的关注） |
+
+以上接口需登录，列表归属由登录上下文确定。个人中心展示两类列表及人数，支持昵称、用户名和院系搜索、每页 6 人的前端分页；互相关注状态取两份列表的交集。操作成功后同步更新本地列表和人数，失败时保留原状态；可刷新重新获取列表。取消关注不会删除对方对我的关注。
 
 ### 竞赛 Competition
 | 方法 | 路径 | 请求 | 返回 data |

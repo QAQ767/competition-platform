@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import javax.validation.Valid;
 
 /**
  * 用户接口
@@ -30,7 +31,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    public Result<UserVO> updateProfile(@RequestBody ProfileReq req) {
+    public Result<UserVO> updateProfile(@Valid @RequestBody ProfileReq req) {
         return Result.success(userService.updateProfile(UserContext.getUserId(), req));
     }
 

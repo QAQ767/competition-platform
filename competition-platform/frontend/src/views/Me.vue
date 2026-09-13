@@ -9,9 +9,7 @@
       <template #header>
         <div class="card-head">
           <span>我的资料</span>
-          <el-button size="small" @click="editVisible = true"
-            >编辑资料</el-button
-          >
+          <el-button size="small" @click="openEdit">编辑资料</el-button>
         </div>
       </template>
       <div class="avatar-row">
@@ -76,6 +74,8 @@
         >
       </div>
     </el-card>
+
+    <UserConnections class="block" />
 
     <el-card shadow="never" class="block">
       <template #header><UiLabel icon="Aim">我的参赛意向</UiLabel></template>
@@ -224,8 +224,23 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editVisible" title="编辑资料" width="460px">
-      <el-form :model="editForm" label-width="70px">
+    <el-dialog
+      v-model="editVisible"
+      title="编辑资料"
+      width="460px"
+      :close-on-click-modal="!saving"
+      :close-on-press-escape="!saving"
+      :show-close="!saving"
+      @opened="profileForm?.clearValidate()"
+    >
+      <el-form
+        ref="profileForm"
+        :model="editForm"
+        :rules="profileRules"
+        label-width="70px"
+        :disabled="saving"
+        @submit.prevent="saveProfile"
+      >
         <el-form-item label="昵称"
           ><el-input v-model="editForm.nickname"
         /></el-form-item>
@@ -235,6 +250,16 @@
         <el-form-item label="专业"
           ><el-input v-model="editForm.major"
         /></el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input
+            v-model.trim="editForm.email"
+            type="email"
+            maxlength="100"
+            placeholder="填写常用邮箱，可留空"
+            autocomplete="email"
+            clearable
+          />
+        </el-form-item>
         <el-form-item label="简介">
           <el-input
             v-model="editForm.intro"
@@ -245,7 +270,9 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
+        <el-button :disabled="saving" @click="editVisible = false"
+          >取消</el-button
+        >
         <el-button type="primary" :loading="saving" @click="saveProfile"
           >保存</el-button
         >
@@ -259,6 +286,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
+import UserConnections from '../components/UserConnections.vue'
 import {
   COMPETE_STATUS,
   TEAM_STATUS_TYPE,
@@ -274,7 +302,20 @@ const inviteBusy = ref(new Set())
 const editVisible = ref(false)
 const saving = ref(false)
 const avatarUploading = ref(false)
-const editForm = reactive({ nickname: '', college: '', major: '', intro: '' })
+const editForm = reactive({
+  nickname: '',
+  college: '',
+  major: '',
+  intro: '',
+  email: ''
+})
+const profileForm = ref()
+const profileRules = {
+  email: [
+    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
+    { max: 100, message: '邮箱不能超过 100 个字符', trigger: 'blur' }
+  ]
+}
 
 // 技能标签编辑
 const skillsVisible = ref(false)
@@ -338,7 +379,8 @@ async function load() {
   try {
     const [teams, applications] = await Promise.all([
       api.get('/user/me/teams'),
-      api.get('/user/me/applications')
+      api.get('/user/me/applications'),
+      store.fetchMe()
     ])
     myTeams.value = teams
     myApplications.value = applications
@@ -394,16 +436,21 @@ function openEdit() {
   editForm.college = store.user?.college || ''
   editForm.major = store.user?.major || ''
   editForm.intro = store.user?.intro || ''
+  editForm.email = store.user?.email || ''
   editVisible.value = true
 }
 
 async function saveProfile() {
+  if (saving.value) return
   saving.value = true
   try {
-    const user = await api.put('/user/profile', editForm)
+    if (!(await profileForm.value.validate().catch(() => false))) return
+    const user = await api.put('/user/profile', { ...editForm })
     store.setUser(user)
     ElMessage.success('资料已更新')
     editVisible.value = false
+  } catch {
+    // 接口层显示错误，保留输入内容以便重试。
   } finally {
     saving.value = false
   }
@@ -415,6 +462,9 @@ onMounted(load)
 <style scoped>
 .block {
   margin-bottom: 16px;
+}
+:deep(.el-descriptions__body) {
+  overflow-wrap: anywhere;
 }
 .avatar-row {
   display: flex;

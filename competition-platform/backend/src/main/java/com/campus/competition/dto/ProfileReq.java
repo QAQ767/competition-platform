@@ -1,5 +1,8 @@
 package com.campus.competition.dto;
 
+import javax.validation.constraints.Email;
+import javax.validation.constraints.Size;
+
 /**
  * 个人资料更新请求
  */
@@ -10,6 +13,17 @@ public class ProfileReq {
     private String avatar;
     private String college;
     private String major;
+    @Email(message = "请输入有效的邮箱地址")
+    @Size(max = 100, message = "邮箱不能超过 100 个字符")
+    private String email;
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.trim();
+    }
 
     public String getNickname() {
         return nickname;

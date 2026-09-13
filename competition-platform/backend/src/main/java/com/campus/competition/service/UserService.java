@@ -1,6 +1,7 @@
 package com.campus.competition.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.campus.competition.common.BusinessException;
 import com.campus.competition.dto.ProfileReq;
 import com.campus.competition.entity.SkillTag;
@@ -58,19 +59,24 @@ public class UserService {
         this.competitionMapper = competitionMapper;
     }
 
+    @Transactional
     public UserVO updateProfile(Long userId, ProfileReq req) {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
-        if (req.getNickname() != null && !req.getNickname().isBlank()) {
-            user.setNickname(req.getNickname());
+        // 只更新本次提交的字段，避免头像上传等局部更新覆盖已有资料。
+        LambdaUpdateWrapper<User> update = new LambdaUpdateWrapper<User>().eq(User::getId, userId);
+        update.set(req.getNickname() != null && !req.getNickname().isBlank(), User::getNickname, req.getNickname());
+        update.set(req.getIntro() != null, User::getIntro, req.getIntro());
+        update.set(req.getAvatar() != null, User::getAvatar, req.getAvatar());
+        update.set(req.getCollege() != null, User::getCollege, req.getCollege());
+        update.set(req.getMajor() != null, User::getMajor, req.getMajor());
+        update.set(req.getEmail() != null, User::getEmail, req.getEmail());
+        if (update.getSqlSet() != null) {
+            userMapper.update(null, update);
+            user = userMapper.selectById(userId);
         }
-        user.setIntro(req.getIntro());
-        user.setAvatar(req.getAvatar());
-        user.setCollege(req.getCollege());
-        user.setMajor(req.getMajor());
-        userMapper.updateById(user);
         return UserVOHelper.toUserVO(user, userSkillMapper, skillTagMapper);
     }
 
