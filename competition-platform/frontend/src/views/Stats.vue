@@ -1,18 +1,29 @@
 <template>
   <div v-loading="loading">
+    <PageHeading
+      title="看见校园里的竞赛热情"
+      description="从平台数据到热门赛事，发现同学们正在关注的方向。"
+      eyebrow="CAMPUS AT A GLANCE"
+    />
     <el-row :gutter="16">
-      <el-col :span="6" v-for="card in cards" :key="card.label">
+      <el-col :xs="12" :sm="12" :lg="6" v-for="card in cards" :key="card.label">
         <el-card shadow="hover" class="stat-card">
-          <div class="stat-num" :style="{ color: card.color }">{{ card.value }}</div>
+          <div class="stat-num" :style="{ color: card.color }">
+            {{ card.value }}
+          </div>
           <div class="stat-label">{{ card.label }}</div>
         </el-card>
       </el-col>
     </el-row>
 
     <el-card shadow="never" style="margin-top: 16px">
-      <template #header>🔥 竞赛热度排行（组队数量 Top 5）</template>
+      <template #header>竞赛热度排行 · 组队数量 TOP 5</template>
       <div ref="chartRef" style="height: 360px"></div>
-      <el-empty v-if="!stats?.hotCompetitions?.length" description="暂无数据" :image-size="60" />
+      <el-empty
+        v-if="!stats?.hotCompetitions?.length"
+        description="暂无数据"
+        :image-size="60"
+      />
     </el-card>
   </div>
 </template>
@@ -28,10 +39,22 @@ const chartRef = ref(null)
 let chart = null
 
 const cards = computed(() => [
-  { label: '平台用户数', value: stats.value?.userCount ?? '-', color: '#409eff' },
+  {
+    label: '平台用户数',
+    value: stats.value?.userCount ?? '-',
+    color: '#409eff'
+  },
   { label: '队伍总数', value: stats.value?.teamCount ?? '-', color: '#67c23a' },
-  { label: '竞赛总数', value: stats.value?.competitionCount ?? '-', color: '#e6a23c' },
-  { label: '获奖记录数', value: stats.value?.achievementCount ?? '-', color: '#f56c6c' }
+  {
+    label: '竞赛总数',
+    value: stats.value?.competitionCount ?? '-',
+    color: '#e6a23c'
+  },
+  {
+    label: '获奖记录数',
+    value: stats.value?.achievementCount ?? '-',
+    color: '#f56c6c'
+  }
 ])
 
 function renderChart() {
@@ -103,5 +126,16 @@ onBeforeUnmount(() => {
   color: #909399;
   font-size: 13px;
   margin-top: 6px;
+}
+.stat-card {
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+.stat-num {
+  font-size: 36px;
+  letter-spacing: -1px;
+}
+.stat-label {
+  margin-top: 10px;
 }
 </style>

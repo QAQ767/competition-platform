@@ -1,5 +1,10 @@
 <template>
   <div>
+    <PageHeading
+      title="让平台更懂你的需要"
+      description="分享建议、反馈问题，或告诉我们你期待参加的赛事。"
+      eyebrow="WE ARE LISTENING"
+    />
     <el-card shadow="never">
       <template #header>📮 反馈提交（想参加的平台没有？告诉我们！）</template>
       <el-form :model="form" label-width="80px" style="max-width: 620px">
@@ -19,7 +24,9 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="submitting" @click="submit">提交反馈</el-button>
+          <el-button type="primary" :loading="submitting" @click="submit"
+            >提交反馈</el-button
+          >
         </el-form-item>
       </el-form>
     </el-card>
@@ -31,12 +38,20 @@
         <el-table-column prop="content" label="内容" min-width="240" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === '待处理' ? 'warning' : 'success'" size="small">{{ row.status }}</el-tag>
+            <el-tag
+              :type="row.status === '待处理' ? 'warning' : 'success'"
+              size="small"
+              >{{ row.status }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="提交时间" width="170" />
       </el-table>
-      <el-empty v-if="!myList.length" description="暂无反馈记录" :image-size="60" />
+      <el-empty
+        v-if="!myList.length"
+        description="暂无反馈记录"
+        :image-size="60"
+      />
       <el-pagination
         v-if="total > pageSize"
         layout="prev, pager, next, total"
@@ -63,7 +78,9 @@ const pageSize = 10
 const total = ref(0)
 
 async function load() {
-  const data = await api.get('/feedback/my', { params: { page: page.value, size: pageSize } })
+  const data = await api.get('/feedback/my', {
+    params: { page: page.value, size: pageSize }
+  })
   myList.value = data.records || []
   total.value = data.total || 0
 }

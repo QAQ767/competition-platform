@@ -6,18 +6,40 @@ const routes = [
   { path: '/teams', component: () => import('../views/TeamSquare.vue') },
   { path: '/teams/:id', component: () => import('../views/TeamDetail.vue') },
   { path: '/stats', component: () => import('../views/Stats.vue') },
-  { path: '/achievements', component: () => import('../views/Achievements.vue') },
+  {
+    path: '/achievements',
+    component: () => import('../views/Achievements.vue')
+  },
   { path: '/training', component: () => import('../views/Training.vue') },
   { path: '/users/:id', component: () => import('../views/UserHome.vue') },
-  { path: '/chat', component: () => import('../views/Chat.vue'), meta: { requiresAuth: true } },
-  { path: '/feedback', component: () => import('../views/Feedback.vue'), meta: { requiresAuth: true } },
-  { path: '/me', component: () => import('../views/Me.vue'), meta: { requiresAuth: true } },
-  { path: '/admin', component: () => import('../views/Admin.vue'), meta: { requiresAuth: true } }
+  {
+    path: '/chat',
+    component: () => import('../views/Chat.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/feedback',
+    component: () => import('../views/Feedback.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/me',
+    component: () => import('../views/Me.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin',
+    component: () => import('../views/Admin.vue'),
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    return savedPosition || { top: 0 }
+  }
 })
 
 router.beforeEach((to) => {

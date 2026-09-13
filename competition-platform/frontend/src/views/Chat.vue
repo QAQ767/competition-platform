@@ -4,11 +4,25 @@
       <template #header>💬 会话列表</template>
       <div v-if="!convs.length" class="conv-empty">
         暂无会话<br />
-        <span style="font-size: 12px; color: #909399">去组队广场点击大厅消息里的小伙伴昵称即可发起私聊</span>
+        <span style="font-size: 12px; color: #909399"
+          >去组队广场点击大厅消息里的小伙伴昵称即可发起私聊</span
+        >
       </div>
-      <div v-for="c in convs" :key="c.userId" class="conv-item" :class="{ active: c.userId === currentId }" @click="openConv(c)">
+      <div
+        v-for="c in convs"
+        :key="c.userId"
+        class="conv-item"
+        :class="{ active: c.userId === currentId }"
+        @click="openConv(c)"
+      >
         <div class="conv-name">
-          <span class="name-link" @contextmenu.prevent="openUserMenu($event, { userId: c.userId, userName: c.userName })">{{ c.userName }}</span>
+          <span
+            class="name-link"
+            @contextmenu.prevent="
+              openUserMenu($event, { userId: c.userId, userName: c.userName })
+            "
+            >{{ c.userName }}</span
+          >
           <el-badge v-if="c.unread" :value="c.unread" :max="99" />
         </div>
         <div class="conv-last">{{ c.lastMessage }}</div>
@@ -17,31 +31,61 @@
 
     <el-card shadow="never" class="msg-card">
       <template #header>
-        <span class="name-link" @contextmenu.prevent="currentId && openUserMenu($event, { userId: currentId, userName: currentName })">{{ currentName || '请选择会话' }}</span>
+        <span
+          class="name-link"
+          @contextmenu.prevent="
+            currentId &&
+            openUserMenu($event, { userId: currentId, userName: currentName })
+          "
+          >{{ currentName || '请选择会话' }}</span
+        >
         <el-button
-          v-if="currentId && currentId !== store.user?.id && !isFollowing(currentId)"
+          v-if="
+            currentId && currentId !== store.user?.id && !isFollowing(currentId)
+          "
           type="success"
           size="small"
           plain
           style="margin-left: 10px"
           @click="followCurrent"
-        >＋关注后可私聊</el-button>
+          >＋关注后可私聊</el-button
+        >
       </template>
       <div v-if="!currentId" class="conv-empty">从左侧选择一个会话开始聊天</div>
       <div v-else class="msg-list" ref="msgListRef">
-        <div v-if="!dmLoadedAll" class="msg-load-more" @click="loadEarlierDm">⏫ 加载更早消息</div>
-        <div v-for="m in messages" :key="m.id" class="msg-row" :class="{ mine: m.userId === store.user.id }">
+        <div v-if="!dmLoadedAll" class="msg-load-more" @click="loadEarlierDm">
+          ⏫ 加载更早消息
+        </div>
+        <div
+          v-for="m in messages"
+          :key="m.id"
+          class="msg-row"
+          :class="{ mine: m.userId === store.user.id }"
+        >
           <div class="msg-bubble">{{ m.content }}</div>
           <div class="msg-meta">
             <template v-if="m.userId === store.user.id">我</template>
-            <span v-else class="name-link" @contextmenu.prevent="openUserMenu($event, { userId: m.userId, userName: m.userName })">{{ m.userName }}</span>
+            <span
+              v-else
+              class="name-link"
+              @contextmenu.prevent="
+                openUserMenu($event, { userId: m.userId, userName: m.userName })
+              "
+              >{{ m.userName }}</span
+            >
             <span> · {{ m.createTime }}</span>
           </div>
         </div>
       </div>
       <div v-if="currentId" class="msg-input">
-        <el-input v-model="text" placeholder="输入消息，回车发送" @keyup.enter="send" />
-        <el-button type="primary" :loading="sending" @click="send">发送</el-button>
+        <el-input
+          v-model="text"
+          placeholder="输入消息，回车发送"
+          @keyup.enter="send"
+        />
+        <el-button type="primary" :loading="sending" @click="send"
+          >发送</el-button
+        >
       </div>
     </el-card>
   </div>
@@ -53,7 +97,12 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
-import { connectWebSocket, isWsOpen, sendWsMessage, onWsMessage } from '../utils/websocket'
+import {
+  connectWebSocket,
+  isWsOpen,
+  sendWsMessage,
+  onWsMessage
+} from '../utils/websocket'
 import { openUserMenu } from '../utils/userMenu'
 
 const route = useRoute()
@@ -86,13 +135,20 @@ function handleWs(msg) {
   const me = store.user?.id
   if (msg.data.userId === me || msg.data.receiverId === me) {
     // 自己发出的消息被服务端回显 → 清空输入框
-    if (pendingText && msg.data.userId === me && msg.data.content === pendingText) {
+    if (
+      pendingText &&
+      msg.data.userId === me &&
+      msg.data.content === pendingText
+    ) {
       text.value = ''
       pendingText = ''
     }
     loadConvs()
     // 当前正与对方聊天时，直接拉取新消息并标记已读
-    if (msg.data.userId === currentId.value || msg.data.receiverId === currentId.value) {
+    if (
+      msg.data.userId === currentId.value ||
+      msg.data.receiverId === currentId.value
+    ) {
       loadMessages()
       if (msg.data.receiverId === me) {
         api.post(`/chat/dm/${msg.data.userId}/read`).catch(() => {})
@@ -113,7 +169,12 @@ async function loadConvs() {
     } catch (e) {
       /* 忽略 */
     }
-    convs.value.unshift({ userId: to, userName: name, lastMessage: '', unread: 0 })
+    convs.value.unshift({
+      userId: to,
+      userName: name,
+      lastMessage: '',
+      unread: 0
+    })
   }
 }
 
@@ -140,7 +201,9 @@ async function loadMessages() {
   if (!currentId.value) return
   dmPage.value = 1
   dmLoadedAll.value = false
-  const data = await api.get(`/chat/dm/${currentId.value}`, { params: { page: 1, size: dmPageSize } })
+  const data = await api.get(`/chat/dm/${currentId.value}`, {
+    params: { page: 1, size: dmPageSize }
+  })
   messages.value = data.records || []
   dmLoadedAll.value = (data.records || []).length >= data.total
   scrollBottom()
@@ -315,5 +378,36 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   margin-top: 12px;
+}
+.msg-card {
+  min-width: 0;
+}
+.msg-list {
+  background: #f7f9fd;
+}
+.msg-bubble {
+  border: 1px solid #eaf0f8;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.msg-row.mine .msg-bubble {
+  background: #3867ed;
+  border-color: #3867ed;
+}
+@media (max-width: 900px) {
+  .chat-page {
+    flex-direction: column;
+  }
+  .conv-card,
+  .msg-card {
+    width: 100%;
+  }
+  .conv-card :deep(.el-card__body) {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .msg-list {
+    height: 400px;
+  }
 }
 </style>

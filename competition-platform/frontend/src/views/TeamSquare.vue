@@ -1,43 +1,129 @@
 <template>
   <div>
+    <PageHeading
+      title="优秀的伙伴，让热爱走得更远"
+      description="发现技能互补的队伍，或发起属于你的竞赛计划。"
+      eyebrow="FIND YOUR TEAM"
+    />
     <el-card shadow="never" class="filter-card">
-      <el-select v-model="filters.competitionId" placeholder="目标竞赛" clearable style="width: 200px" @change="onFilterChange">
-        <el-option v-for="c in competitions" :key="c.id" :label="c.name" :value="c.id" />
+      <el-select
+        v-model="filters.competitionId"
+        placeholder="目标竞赛"
+        clearable
+        style="width: 200px"
+        @change="onFilterChange"
+      >
+        <el-option
+          v-for="c in competitions"
+          :key="c.id"
+          :label="c.name"
+          :value="c.id"
+        />
       </el-select>
-      <el-select v-model="filters.skill" placeholder="技能标签" clearable style="width: 140px; margin-left: 10px" @change="onFilterChange">
+      <el-select
+        v-model="filters.skill"
+        placeholder="技能标签"
+        clearable
+        style="width: 140px; margin-left: 10px"
+        @change="onFilterChange"
+      >
         <el-option v-for="s in SKILLS" :key="s" :label="s" :value="s" />
       </el-select>
-      <el-select v-model="filters.status" placeholder="队伍状态" clearable style="width: 140px; margin-left: 10px" @change="onFilterChange">
+      <el-select
+        v-model="filters.status"
+        placeholder="队伍状态"
+        clearable
+        style="width: 140px; margin-left: 10px"
+        @change="onFilterChange"
+      >
         <el-option label="招募中" value="招募中" />
         <el-option label="已满员" value="已满员" />
         <el-option label="备赛中" value="备赛中" />
       </el-select>
-      <el-input v-model="filters.keyword" placeholder="搜索队伍标题" clearable style="width: 200px; margin-left: 10px" @keyup.enter="load" />
-      <el-button type="primary" style="margin-left: 10px" @click="load">查询</el-button>
-      <el-button type="success" style="margin-left: 10px" @click="openCreate">＋ 创建组队</el-button>
+      <el-input
+        v-model="filters.keyword"
+        placeholder="搜索队伍标题"
+        clearable
+        style="width: 200px; margin-left: 10px"
+        @keyup.enter="load"
+      />
+      <el-button type="primary" style="margin-left: 10px" @click="load"
+        >查询</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        style="margin-left: 10px"
+        @click="openCreate"
+        >＋ 创建组队</el-button
+      >
     </el-card>
 
     <el-row :gutter="16">
-      <el-col :span="8" v-for="t in teams" :key="t.id" style="margin-bottom: 16px">
-        <el-card shadow="hover" class="team-card" @click="goDetail(t.id)">
-          <div class="team-head">
-            <span class="team-title">{{ t.title }}</span>
-            <el-tag :type="TEAM_STATUS_TYPE[t.status] || 'info'" size="small">{{ t.status }}</el-tag>
+      <el-col
+        :xs="24"
+        :sm="12"
+        :lg="8"
+        v-for="t in teams"
+        :key="t.id"
+        style="margin-bottom: 16px"
+      >
+        <el-card shadow="hover" class="team-card">
+          <div class="team-emblem">
+            <el-icon><Connection /></el-icon><span>寻找一起突破的伙伴</span>
           </div>
-          <div class="team-meta">🎯 {{ t.competitionName }}</div>
-          <div class="team-meta">👤 队长：{{ t.captainName }}</div>
-          <div class="team-meta">👥 成员：{{ t.memberCount }} / {{ t.maxMembers }}</div>
+          <div class="team-head">
+            <router-link :to="`/teams/${t.id}`" class="team-title">{{
+              t.title
+            }}</router-link>
+            <el-tag :type="TEAM_STATUS_TYPE[t.status] || 'info'" size="small">{{
+              t.status
+            }}</el-tag>
+          </div>
+          <div class="team-meta">
+            <el-icon><Trophy /></el-icon> {{ t.competitionName }}
+          </div>
+          <div class="team-meta">
+            <el-icon><User /></el-icon> 队长：{{ t.captainName }}
+          </div>
+          <div class="team-meta">
+            <el-icon><Connection /></el-icon> 成员：{{ t.memberCount }} /
+            {{ t.maxMembers }}
+          </div>
+          <el-progress
+            :percentage="
+              Math.min(
+                100,
+                Math.round(((t.memberCount || 0) / (t.maxMembers || 1)) * 100)
+              )
+            "
+            :show-text="false"
+            :stroke-width="5"
+            class="team-progress"
+          />
           <div class="team-skills">
-            <el-tag v-for="s in t.skills" :key="s" size="small" type="warning" effect="plain" style="margin-right: 6px">{{ s }}</el-tag>
+            <el-tag
+              v-for="s in t.skills"
+              :key="s"
+              size="small"
+              type="warning"
+              effect="plain"
+              style="margin-right: 6px"
+              >{{ s }}</el-tag
+            >
           </div>
           <div class="team-actions">
+            <el-button type="primary" link @click="goDetail(t.id)"
+              >查看队伍 <el-icon><ArrowRight /></el-icon
+            ></el-button>
             <el-button
               v-if="store.isLogin && t.status === '招募中'"
               type="primary"
               size="small"
               plain
               @click.stop="openApply(t)"
-            >申请入队</el-button>
+              >申请入队</el-button
+            >
           </div>
         </el-card>
       </el-col>
@@ -54,11 +140,29 @@
     />
 
     <el-card shadow="never" class="hall-chat">
-      <template #header>💬 组队大厅聊天（左键私聊，右键看资料）</template>
+      <template #header
+        ><div class="hall-heading">
+          <span>组队交流大厅</span
+          ><small>打个招呼，认识未来的队友 · 点击昵称私聊，右键查看资料</small>
+        </div></template
+      >
       <div class="hall-msg-list" ref="hallListRef">
-        <div v-if="!hallLoadedAll" class="hall-load-more" @click="loadHallEarlier">⏫ 加载更早消息</div>
+        <div
+          v-if="!hallLoadedAll"
+          class="hall-load-more"
+          @click="loadHallEarlier"
+        >
+          ⏫ 加载更早消息
+        </div>
         <div v-for="m in hallMsgs" :key="m.id" class="hall-msg">
-          <span class="hall-name" @click="startDm(m)" @contextmenu.prevent="openUserMenu($event, { userId: m.userId, userName: m.userName })">{{ m.userName }}</span>
+          <span
+            class="hall-name"
+            @click="startDm(m)"
+            @contextmenu.prevent="
+              openUserMenu($event, { userId: m.userId, userName: m.userName })
+            "
+            >{{ m.userName }}</span
+          >
           <span class="hall-content">{{ m.content }}</span>
           <span class="hall-time">{{ m.createTime }}</span>
         </div>
@@ -70,47 +174,88 @@
           @keyup.enter="sendHall"
           :disabled="!store.isLogin"
         />
-        <el-button type="primary" :disabled="!store.isLogin" @click="sendHall">发送</el-button>
+        <el-button type="primary" :disabled="!store.isLogin" @click="sendHall"
+          >发送</el-button
+        >
       </div>
     </el-card>
 
     <el-dialog v-model="applyVisible" title="申请加入队伍" width="420px">
-      <p style="margin-top: 0"><b>{{ applyTeam?.title }}</b></p>
-      <el-input v-model="applyIntro" type="textarea" :rows="4" placeholder="介绍一下自己：擅长什么、能承担什么角色" />
+      <p style="margin-top: 0">
+        <b>{{ applyTeam?.title }}</b>
+      </p>
+      <el-input
+        v-model="applyIntro"
+        type="textarea"
+        :rows="4"
+        placeholder="介绍一下自己：擅长什么、能承担什么角色"
+      />
       <template #footer>
         <el-button @click="applyVisible = false">取消</el-button>
-        <el-button type="primary" :loading="applying" @click="doApply">提交申请</el-button>
+        <el-button type="primary" :loading="applying" @click="doApply"
+          >提交申请</el-button
+        >
       </template>
     </el-dialog>
 
     <el-dialog v-model="createVisible" title="创建组队" width="520px">
       <el-form :model="createForm" label-width="90px">
         <el-form-item label="目标竞赛" required>
-          <el-select v-model="createForm.competitionId" placeholder="选择竞赛" style="width: 100%">
-            <el-option v-for="c in competitions" :key="c.id" :label="c.name" :value="c.id" />
+          <el-select
+            v-model="createForm.competitionId"
+            placeholder="选择竞赛"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="c in competitions"
+              :key="c.id"
+              :label="c.name"
+              :value="c.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="组队标题" required>
-          <el-input v-model="createForm.title" placeholder="如：数学建模组队招人（缺数据分析）" />
+          <el-input
+            v-model="createForm.title"
+            placeholder="如：数学建模组队招人（缺数据分析）"
+          />
         </el-form-item>
         <el-form-item label="队伍简介">
-          <el-input v-model="createForm.description" type="textarea" :rows="3" placeholder="描述队伍定位、缺什么样的人" />
+          <el-input
+            v-model="createForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="描述队伍定位、缺什么样的人"
+          />
         </el-form-item>
         <el-form-item label="人数上限" required>
           <el-input-number v-model="createForm.maxMembers" :min="2" :max="10" />
         </el-form-item>
         <el-form-item label="所需技能">
-          <el-select v-model="createForm.skills" multiple placeholder="选择需要的技能（AI 将据此推荐队友）" style="width: 100%">
+          <el-select
+            v-model="createForm.skills"
+            multiple
+            placeholder="选择需要的技能（AI 将据此推荐队友）"
+            style="width: 100%"
+          >
             <el-option v-for="s in SKILLS" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
         <el-form-item label="截止时间">
-          <el-date-picker v-model="createForm.deadline" type="datetime" placeholder="组队截止" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
+          <el-date-picker
+            v-model="createForm.deadline"
+            type="datetime"
+            placeholder="组队截止"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="doCreate">创建</el-button>
+        <el-button type="primary" :loading="creating" @click="doCreate"
+          >创建</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -123,7 +268,12 @@ import { ElMessage } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
 import { SKILLS, TEAM_STATUS_TYPE } from '../utils/constants'
-import { connectWebSocket, isWsOpen, sendWsMessage, onWsMessage } from '../utils/websocket'
+import {
+  connectWebSocket,
+  isWsOpen,
+  sendWsMessage,
+  onWsMessage
+} from '../utils/websocket'
 import { openUserMenu } from '../utils/userMenu'
 
 const route = useRoute()
@@ -135,7 +285,12 @@ const teams = ref([])
 const teamsPage = ref(1)
 const teamsPageSize = 9
 const teamsTotal = ref(0)
-const filters = reactive({ competitionId: null, skill: '', status: '', keyword: '' })
+const filters = reactive({
+  competitionId: null,
+  skill: '',
+  status: '',
+  keyword: ''
+})
 
 const createVisible = ref(false)
 const creating = ref(false)
@@ -182,7 +337,9 @@ async function loadHall() {
   hallPage.value = 1
   hallLoadedAll.value = false
   try {
-    const data = await api.get('/chat/hall', { params: { page: 1, size: hallPageSize } })
+    const data = await api.get('/chat/hall', {
+      params: { page: 1, size: hallPageSize }
+    })
     hallMsgs.value = data.records || []
     hallLoadedAll.value = (data.records || []).length >= data.total
   } catch (e) {
@@ -196,7 +353,9 @@ async function loadHall() {
 
 async function loadHallEarlier() {
   try {
-    const data = await api.get('/chat/hall', { params: { page: hallPage.value + 1, size: hallPageSize } })
+    const data = await api.get('/chat/hall', {
+      params: { page: hallPage.value + 1, size: hallPageSize }
+    })
     const older = data.records || []
     hallMsgs.value = [...older, ...hallMsgs.value]
     hallPage.value = data.page
@@ -246,7 +405,9 @@ function openApply(t) {
 async function doApply() {
   applying.value = true
   try {
-    await api.post(`/teams/${applyTeam.value.id}/apply`, { intro: applyIntro.value })
+    await api.post(`/teams/${applyTeam.value.id}/apply`, {
+      intro: applyIntro.value
+    })
     ElMessage.success('申请已提交，等待队长审批')
     applyVisible.value = false
   } finally {
@@ -393,5 +554,86 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   margin-top: 10px;
+}
+.team-card {
+  cursor: default;
+  height: 100%;
+}
+.team-emblem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8594ad;
+  font-size: 11px;
+  margin-bottom: 20px;
+}
+.team-emblem > .el-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: #edf2ff;
+  color: #6184e5;
+  border-radius: 10px;
+  font-size: 22px;
+}
+.team-head {
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.team-title {
+  color: #24324b;
+  text-decoration: none;
+  line-height: 1.6;
+}
+.team-title:hover {
+  color: #3867ed;
+}
+.team-head .el-tag {
+  flex-shrink: 0;
+}
+.team-meta {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #7b889f;
+}
+.team-progress {
+  margin-top: 16px;
+}
+.team-skills {
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+.team-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #edf0f5;
+  padding-top: 15px;
+}
+.hall-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.hall-heading small {
+  color: #8c98ac;
+  font-size: 11px;
+  font-weight: 400;
+}
+.hall-msg {
+  padding: 10px 0;
+  border-bottom: 1px solid #e9edf4;
+}
+.hall-chat {
+  margin-top: 28px;
 }
 </style>

@@ -1,41 +1,91 @@
 <template>
   <div v-loading="loading">
+    <PageHeading
+      title="我的成长档案"
+      description="完善技能与参赛意向，让合适的队友更容易找到你。"
+      eyebrow="YOUR CAMPUS PROFILE"
+    />
     <el-card shadow="never" class="block">
       <template #header>
         <div class="card-head">
           <span>我的资料</span>
-          <el-button size="small" @click="editVisible = true">编辑资料</el-button>
+          <el-button size="small" @click="editVisible = true"
+            >编辑资料</el-button
+          >
         </div>
       </template>
       <div class="avatar-row">
-        <el-avatar :size="72" :src="store.user?.avatar || undefined">{{ (store.user?.nickname || '?').charAt(0) }}</el-avatar>
+        <el-avatar :size="72" :src="store.user?.avatar || undefined">{{
+          (store.user?.nickname || '?').charAt(0)
+        }}</el-avatar>
         <div class="avatar-actions">
-          <el-upload :show-file-list="false" :http-request="uploadAvatar" :before-upload="beforeAvatar">
-            <el-button size="small" :loading="avatarUploading">上传头像</el-button>
+          <el-upload
+            :show-file-list="false"
+            :http-request="uploadAvatar"
+            :before-upload="beforeAvatar"
+          >
+            <el-button size="small" :loading="avatarUploading"
+              >上传头像</el-button
+            >
           </el-upload>
           <div class="avatar-tip">支持图片，≤20MB</div>
         </div>
       </div>
       <el-descriptions :column="2" size="small">
-        <el-descriptions-item label="昵称">{{ store.user?.nickname }}</el-descriptions-item>
-        <el-descriptions-item label="用户名">{{ store.user?.username }}</el-descriptions-item>
-        <el-descriptions-item label="学院">{{ store.user?.college || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="专业">{{ store.user?.major || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="邮箱">{{ store.user?.email || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="简介">{{ store.user?.intro || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="昵称">{{
+          store.user?.nickname
+        }}</el-descriptions-item>
+        <el-descriptions-item label="用户名">{{
+          store.user?.username
+        }}</el-descriptions-item>
+        <el-descriptions-item label="学院">{{
+          store.user?.college || '—'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="专业">{{
+          store.user?.major || '—'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="邮箱">{{
+          store.user?.email || '—'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="简介">{{
+          store.user?.intro || '—'
+        }}</el-descriptions-item>
       </el-descriptions>
       <div class="skills-line">
         <span class="label">技能标签：</span>
-        <el-tag v-for="s in store.user?.skills || []" :key="s.id" size="small" effect="plain" style="margin-right: 6px">{{ s.name }}</el-tag>
-        <span v-if="!(store.user?.skills || []).length" style="color: #909399; font-size: 13px">暂无</span>
-        <el-button size="small" link type="primary" style="margin-left: 6px" @click="openSkillsEdit">编辑标签</el-button>
+        <el-tag
+          v-for="s in store.user?.skills || []"
+          :key="s.id"
+          size="small"
+          effect="plain"
+          style="margin-right: 6px"
+          >{{ s.name }}</el-tag
+        >
+        <span
+          v-if="!(store.user?.skills || []).length"
+          style="color: #909399; font-size: 13px"
+          >暂无</span
+        >
+        <el-button
+          size="small"
+          link
+          type="primary"
+          style="margin-left: 6px"
+          @click="openSkillsEdit"
+          >编辑标签</el-button
+        >
       </div>
     </el-card>
 
     <el-card shadow="never" class="block">
       <template #header>🤖 我的参赛状态（AI 推荐候选池开关）</template>
-      <el-alert type="info" :closable="false" show-icon
-        title="只有「希望被邀请 / 可接受邀请」时，你才会被 AI 推荐给其他队长；切换后立即生效" style="margin-bottom: 16px" />
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        title="只有「希望被邀请 / 可接受邀请」时，你才会被 AI 推荐给其他队长；切换后立即生效"
+        style="margin-bottom: 16px"
+      />
       <div class="status-grid">
         <div
           v-for="(item, key) in COMPETE_STATUS"
@@ -52,20 +102,33 @@
 
     <el-card shadow="never" class="block">
       <template #header>我的队伍</template>
-      <el-table :data="myTeams" size="small" @row-click="(row) => $router.push(`/teams/${row.id}`)">
+      <el-table
+        :data="myTeams"
+        size="small"
+        @row-click="(row) => $router.push(`/teams/${row.id}`)"
+      >
         <el-table-column prop="title" label="队伍" />
         <el-table-column prop="competitionName" label="目标竞赛" width="180" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="TEAM_STATUS_TYPE[row.status] || 'info'" size="small">{{ row.status }}</el-tag>
+            <el-tag
+              :type="TEAM_STATUS_TYPE[row.status] || 'info'"
+              size="small"
+              >{{ row.status }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column label="成员" width="90">
-          <template #default="{ row }">{{ row.memberCount }} / {{ row.maxMembers }}</template>
+          <template #default="{ row }"
+            >{{ row.memberCount }} / {{ row.maxMembers }}</template
+          >
         </el-table-column>
         <el-table-column label="角色" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.captainId === store.user?.id ? 'danger' : 'info'" size="small">
+            <el-tag
+              :type="row.captainId === store.user?.id ? 'danger' : 'info'"
+              size="small"
+            >
               {{ row.captainId === store.user?.id ? '队长' : '队员' }}
             </el-tag>
           </template>
@@ -78,11 +141,16 @@
               size="small"
               link
               @click.stop="leaveTeam(row)"
-            >退出</el-button>
+              >退出</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-if="!myTeams.length" description="还没有加入任何队伍" :image-size="60" />
+      <el-empty
+        v-if="!myTeams.length"
+        description="还没有加入任何队伍"
+        :image-size="60"
+      />
     </el-card>
 
     <el-card shadow="never" class="block">
@@ -94,20 +162,39 @@
         <el-table-column prop="intro" label="申请说明" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="APPLY_STATUS_TYPE[row.status] || 'info'" size="small">{{ row.status }}</el-tag>
+            <el-tag
+              :type="APPLY_STATUS_TYPE[row.status] || 'info'"
+              size="small"
+              >{{ row.status }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column label="操作" width="150">
           <template #default="{ row }">
             <template v-if="row.status === '待审批' && row.invited">
-              <el-button type="success" size="small" @click="handleInvite(row, 'accept')">接受</el-button>
-              <el-button type="danger" size="small" plain @click="handleInvite(row, 'reject')">拒绝</el-button>
+              <el-button
+                type="success"
+                size="small"
+                @click="handleInvite(row, 'accept')"
+                >接受</el-button
+              >
+              <el-button
+                type="danger"
+                size="small"
+                plain
+                @click="handleInvite(row, 'reject')"
+                >拒绝</el-button
+              >
             </template>
             <span v-else style="color: #909399; font-size: 12px">—</span>
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-if="!myApplications.length" description="还没有申请记录" :image-size="60" />
+      <el-empty
+        v-if="!myApplications.length"
+        description="还没有申请记录"
+        :image-size="60"
+      />
     </el-card>
 
     <el-dialog v-model="skillsVisible" title="选择技能标签" width="460px">
@@ -128,22 +215,37 @@
       </el-select>
       <template #footer>
         <el-button @click="skillsVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingSkills" @click="saveSkills">保存</el-button>
+        <el-button type="primary" :loading="savingSkills" @click="saveSkills"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <el-dialog v-model="editVisible" title="编辑资料" width="460px">
       <el-form :model="editForm" label-width="70px">
-        <el-form-item label="昵称"><el-input v-model="editForm.nickname" /></el-form-item>
-        <el-form-item label="学院"><el-input v-model="editForm.college" /></el-form-item>
-        <el-form-item label="专业"><el-input v-model="editForm.major" /></el-form-item>
+        <el-form-item label="昵称"
+          ><el-input v-model="editForm.nickname"
+        /></el-form-item>
+        <el-form-item label="学院"
+          ><el-input v-model="editForm.college"
+        /></el-form-item>
+        <el-form-item label="专业"
+          ><el-input v-model="editForm.major"
+        /></el-form-item>
         <el-form-item label="简介">
-          <el-input v-model="editForm.intro" type="textarea" :rows="3" placeholder="写上你的擅长方向，更容易被 AI 推荐" />
+          <el-input
+            v-model="editForm.intro"
+            type="textarea"
+            :rows="3"
+            placeholder="写上你的擅长方向，更容易被 AI 推荐"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveProfile">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="saveProfile"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -154,7 +256,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
-import { COMPETE_STATUS, TEAM_STATUS_TYPE, APPLY_STATUS_TYPE, SKILLS } from '../utils/constants'
+import {
+  COMPETE_STATUS,
+  TEAM_STATUS_TYPE,
+  APPLY_STATUS_TYPE,
+  SKILLS
+} from '../utils/constants'
 
 const store = useUserStore()
 const loading = ref(false)
@@ -211,7 +318,9 @@ async function uploadAvatar({ file }) {
   try {
     const fd = new FormData()
     fd.append('file', file)
-    const data = await api.post('/files/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const data = await api.post('/files/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
     const user = await api.put('/user/profile', { avatar: data.url })
     store.setUser(user)
     ElMessage.success('头像已更新')
@@ -237,11 +346,17 @@ async function load() {
 /** 处理收到的入队邀请（接受/拒绝），并同步把相关邀请通知标记已读（让铃铛熄灭） */
 async function handleInvite(row, action) {
   await api.post(`/teams/invites/${row.id}/${action}`)
-  ElMessage.success(action === 'accept' ? '已接受邀请，恭喜入队！' : '已拒绝该邀请')
+  ElMessage.success(
+    action === 'accept' ? '已接受邀请，恭喜入队！' : '已拒绝该邀请'
+  )
   try {
     const notifs = await api.get('/notifications')
-    const unreadInvites = (notifs || []).filter((n) => n.type === 'INVITE' && !n.isRead)
-    await Promise.all(unreadInvites.map((n) => api.post(`/notifications/${n.id}/read`)))
+    const unreadInvites = (notifs || []).filter(
+      (n) => n.type === 'INVITE' && !n.isRead
+    )
+    await Promise.all(
+      unreadInvites.map((n) => api.post(`/notifications/${n.id}/read`))
+    )
   } catch (e) {
     /* 已读同步失败不影响主流程 */
   }
@@ -250,11 +365,15 @@ async function handleInvite(row, action) {
 
 /** 退出队伍（队员） */
 async function leaveTeam(row) {
-  await ElMessageBox.confirm(`确定退出队伍「${row.title}」吗？队长将收到通知。`, '退出队伍', {
-    type: 'warning',
-    confirmButtonText: '确认退出',
-    cancelButtonText: '再想想'
-  })
+  await ElMessageBox.confirm(
+    `确定退出队伍「${row.title}」吗？队长将收到通知。`,
+    '退出队伍',
+    {
+      type: 'warning',
+      confirmButtonText: '确认退出',
+      cancelButtonText: '再想想'
+    }
+  )
   await api.post(`/teams/${row.id}/leave`)
   ElMessage.success('已退出队伍')
   load()
@@ -351,5 +470,19 @@ onMounted(load)
   color: #909399;
   margin-top: 6px;
   line-height: 1.5;
+}
+@media (max-width: 1000px) {
+  .status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+  .card-head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 }
 </style>
