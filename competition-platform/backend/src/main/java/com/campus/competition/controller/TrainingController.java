@@ -4,7 +4,9 @@ import com.campus.competition.annotation.OpLog;
 import com.campus.competition.common.PageVO;
 import com.campus.competition.common.Result;
 import com.campus.competition.common.UserContext;
+import com.campus.competition.dto.TrainingAssistantReq;
 import com.campus.competition.entity.TrainingSite;
+import com.campus.competition.service.TrainingAssistantService;
 import com.campus.competition.service.TrainingService;
 import com.campus.competition.vo.CheckinVO;
 import com.campus.competition.vo.LeaderboardVO;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Set;
@@ -30,9 +33,12 @@ import java.util.Set;
 public class TrainingController {
 
     private final TrainingService trainingService;
+    private final TrainingAssistantService trainingAssistantService;
 
-    public TrainingController(TrainingService trainingService) {
+    public TrainingController(TrainingService trainingService,
+                              TrainingAssistantService trainingAssistantService) {
         this.trainingService = trainingService;
+        this.trainingAssistantService = trainingAssistantService;
     }
 
     // ===== 训练资源（浏览，公开）=====
@@ -49,6 +55,13 @@ public class TrainingController {
     @GetMapping("/tags")
     public Result<List<String>> tags() {
         return Result.success(trainingService.listTags());
+    }
+
+    // ===== AI 辅助训练（登录后使用，SSE 流式回答）=====
+
+    @PostMapping(value = "/assistant/chat", produces = "text/event-stream")
+    public SseEmitter assistantChat(@RequestBody TrainingAssistantReq request) {
+        return trainingAssistantService.chat(UserContext.getUserId(), request);
     }
 
     // ===== 收藏 =====

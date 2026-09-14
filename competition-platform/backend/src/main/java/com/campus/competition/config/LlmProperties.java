@@ -29,6 +29,12 @@ public class LlmProperties {
     /** 单次调用超时（秒），超时自动降级规则引擎 */
     private long timeoutSeconds = 15;
 
+    /** 小智训练问答超时（秒） */
+    private long assistantTimeoutSeconds = 120;
+
+    /** 小智单次回答最大生成 token 数 */
+    private int assistantMaxTokens = 1200;
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -75,5 +81,21 @@ public class LlmProperties {
 
     public void setTimeoutSeconds(long timeoutSeconds) {
         this.timeoutSeconds = timeoutSeconds;
+    }
+
+    public long getAssistantTimeoutSeconds() {
+        return assistantTimeoutSeconds;
+    }
+
+    public void setAssistantTimeoutSeconds(long assistantTimeoutSeconds) {
+        this.assistantTimeoutSeconds = assistantTimeoutSeconds;
+    }
+
+    public int getAssistantMaxTokens() {
+        return assistantMaxTokens;
+    }
+
+    public void setAssistantMaxTokens(int assistantMaxTokens) {
+        this.assistantMaxTokens = assistantMaxTokens;
     }
 }

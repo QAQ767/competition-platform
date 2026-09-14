@@ -111,6 +111,16 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 4. 每条结果含 matchScore(取整) 与 reason。
 5. 代码中定义 `AiService` 接口 + `RuleAiServiceImpl` 实现；预留注释说明可替换为调用 DeepSeek/通义千问 API 生成 reason（demo 不真调 API）。
 
+### 小智 AI 辅助训练
+
+训练中心提供登录后可用的“小智”学习助手，后端连接本地 Ollama `deepseek-r1:7b`。接口使用 SSE 流式返回，不采用通用 `{code,data}` 包装；浏览器按事件逐步追加答案。
+
+| 方法 | 路径 | 请求 | 返回 |
+|---|---|---|---|
+| POST | /training/assistant/chat | `{message,history:[{role,content}],competition?,tag?,resourceName?}` | `text/event-stream`，事件 data 为 `{type:"start"/"chunk"/"done"/"error",content}` |
+
+问题最长 2000 字，客户端最多携带 20 条历史，模型实际读取最近 12 条；每名用户每分钟最多提问 10 次。竞赛分类、标签和资源名称只作为学习场景，不作为系统指令。前端最多在当前浏览器中保留最近 20 条有效消息，可新建对话或中止生成。Ollama 不可用、模型无有效正文或服务繁忙时，以 `error` 事件返回可读提示。
+
 ### 通知 Notification
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|

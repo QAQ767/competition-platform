@@ -102,6 +102,9 @@
                 </div>
                 <div class="site-desc">{{ s.description }}</div>
                 <div class="site-actions">
+                  <button type="button" class="ask-ai-btn" @click="askAbout(s)">
+                    <el-icon><MagicStick /></el-icon> 问小智
+                  </button>
                   <a
                     :href="s.url"
                     target="_blank"
@@ -320,6 +323,11 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
+    <TrainingAssistant
+      ref="assistantRef"
+      :competition="filters.competition"
+      :tag="filters.tag"
+    />
   </div>
 </template>
 
@@ -329,6 +337,7 @@ import { ElMessage } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
 import { openUserMenu } from '../utils/userMenu'
+import TrainingAssistant from '../components/TrainingAssistant.vue'
 import {
   TRAINING_COMPETITIONS,
   TRAINING_DIFFICULTY_TYPE,
@@ -337,6 +346,7 @@ import {
 
 const store = useUserStore()
 const tab = ref('sites')
+const assistantRef = ref(null)
 
 // ===== 训练资源 =====
 const tags = ref([])
@@ -384,6 +394,10 @@ function toggleTag(t) {
 function onSitePage(p) {
   sitesPage.value = p
   loadSites()
+}
+
+function askAbout(site) {
+  assistantRef.value?.openWithResource(site)
 }
 
 async function loadFavoriteIds() {
@@ -570,7 +584,22 @@ onMounted(() => {
   min-height: 38px;
 }
 .site-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 10px;
+}
+.ask-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  color: #7356df;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
 }
 .goto-btn {
   color: #409eff;

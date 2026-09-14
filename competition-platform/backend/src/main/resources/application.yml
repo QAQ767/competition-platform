@@ -63,3 +63,6 @@ llm:
   api-key: "${LLM_API_KEY:}"
   # 单次调用超时（秒），超时自动降级规则模板
   timeout-seconds: 15
+  # 训练助手允许更长的流式回答
+  assistant-timeout-seconds: ${LLM_ASSISTANT_TIMEOUT_SECONDS:120}
+  assistant-max-tokens: ${LLM_ASSISTANT_MAX_TOKENS:1200}
