@@ -7,6 +7,9 @@ import com.campus.competition.entity.Competition;
 import com.campus.competition.mapper.CompetitionMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,6 +20,7 @@ import java.util.List;
  */
 @Service
 public class CompetitionService {
+    private static final Logger log = LoggerFactory.getLogger(CompetitionService.class);
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter FMT_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -32,7 +36,7 @@ public class CompetitionService {
         this.cacheService = cacheService;
     }
 
-    public List<Competition> list(String keyword, String level, String status) {
+    public synchronized List<Competition> list(String keyword, String level, String status) {
         // 无筛选条件时走缓存（热点数据），带筛选直接查库
         if ((keyword == null || keyword.isBlank())
                 && (level == null || level.isBlank())
@@ -66,7 +70,7 @@ public class CompetitionService {
                 new LambdaQueryWrapper<Competition>().orderByAsc(Competition::getSignupEnd));
     }
 
-    public Competition create(CompetitionReq req) {
+    public synchronized Competition create(CompetitionReq req) {
         Competition competition = new Competition();
         competition.setName(req.getName());
         competition.setOrganizer(req.getOrganizer());
@@ -81,12 +85,21 @@ public class CompetitionService {
         return competition;
     }
 
-    public void delete(Long id) {
+    public synchronized void delete(Long id) {
         if (competitionMapper.selectById(id) == null) {
             throw new BusinessException("竞赛不存在");
         }
         competitionMapper.deleteById(id);
         cacheService.delete(CACHE_KEY);
+    }
+
+    // 与列表缓存读写使用同一把锁，避免扫描清缓存后旧查询再次写回旧状态。
+    @Scheduled(fixedRate = 30_000, initialDelay = 30_000)
+    public synchronized void refreshStatuses() {
+        int changed = competitionMapper.refreshStatuses(LocalDateTime.now());
+        // 每轮均清理，上一轮 Redis 暂时不可用时下一轮仍能重试失效。
+        cacheService.delete(CACHE_KEY);
+        if (changed > 0) log.info("竞赛时间检查：已更新 {} 项竞赛的报名状态", changed);
     }
 
     private LocalDateTime parse(String text) {
@@ -102,11 +115,11 @@ public class CompetitionService {
 
     private String computeStatus(LocalDateTime signupStart, LocalDateTime signupEnd) {
         LocalDateTime now = LocalDateTime.now();
+        if (signupEnd != null && !now.isBefore(signupEnd)) {
+            return "已结束";
+        }
         if (signupStart != null && now.isBefore(signupStart)) {
             return "即将开始";
-        }
-        if (signupEnd != null && now.isAfter(signupEnd)) {
-            return "已结束";
         }
         return "报名中";
     }

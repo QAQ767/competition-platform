@@ -369,7 +369,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import {
@@ -433,6 +433,8 @@ async function load() {
   loading.value = true
   try {
     list.value = await api.get('/competitions')
+  } catch {
+    // 接口层提示错误，保留已有列表。
   } finally {
     loading.value = false
   }
@@ -638,13 +640,18 @@ async function removeSite(row) {
   loadSites()
 }
 
+let competitionTimer = null
 onMounted(() => {
   load()
   loadFeedback()
   loadLogs()
   loadAchievements()
   loadSites()
+  competitionTimer = setInterval(() => {
+    if (!loading.value) load()
+  }, 30000)
 })
+onBeforeUnmount(() => clearInterval(competitionTimer))
 </script>
 
 <style scoped>

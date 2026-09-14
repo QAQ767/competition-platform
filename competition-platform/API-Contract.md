@@ -68,6 +68,9 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 以上接口需登录，列表归属由登录上下文确定。个人中心展示两类列表及人数，支持昵称、用户名和院系搜索、每页 6 人的前端分页；互相关注状态取两份列表的交集。操作成功后同步更新本地列表和人数，失败时保留原状态；可刷新重新获取列表。取消关注不会删除对方对我的关注。
 
 ### 竞赛 Competition
+
+竞赛报名状态由后台每 30 秒自动维护，并清理无筛选列表的 Redis 缓存：`signupEnd <= 当前时间` 为“已结束”，否则 `signupStart > 当前时间` 为“即将开始”，其余为“报名中”。准确到达截止时刻即视为报名结束；空日期不构成开始／截止限制。当前“已结束”仅指报名结束，不代表实际赛事已经结束；`startTime` 是开赛时间。首页和竞赛管理页每 30 秒刷新列表。
+
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|
 | GET | /competitions | 可选 query: keyword,level,status | [Competition] |

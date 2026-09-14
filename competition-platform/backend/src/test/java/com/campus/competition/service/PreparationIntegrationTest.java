@@ -63,6 +63,7 @@ class PreparationIntegrationTest {
     @Autowired NotificationService notifications;
     @Autowired TeamTaskMapper taskMapper;
     @Autowired TeamMapper teamMapper;
+    @Autowired CompetitionMapper competitionMapper;
     @Autowired WsPusher ws;
     @Autowired PlatformTransactionManager txManager;
     JdbcTemplate jdbc;
@@ -260,6 +261,37 @@ class PreparationIntegrationTest {
         assertEquals("保留资料", teamMapper.selectById(10L).getDescription());
         var schedule = TeamDeadlineScheduler.class.getMethod("checkDeadlines").getAnnotation(org.springframework.scheduling.annotation.Scheduled.class);
         assertEquals(30000, schedule.fixedRate());
+    }
+
+    @Test void competitionStatusTransitionsRespectExactStartAndEndAndMissingDates() {
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        jdbc.update("DELETE FROM competition");
+        jdbc.update("INSERT INTO competition(id,name,status,signup_start,signup_end) VALUES (1,'开始边界','即将开始',?,?),(2,'截止边界','报名中',?,?),(3,'未开始','报名中',?,?),(4,'无日期',NULL,NULL,NULL),(5,'仅截止','报名中',NULL,?),(6,'矛盾历史日期','报名中',?,?)",
+                now, now.plusDays(1), now.minusDays(1), now, now.plusSeconds(1), now.plusDays(1), now.minusSeconds(1), now.plusDays(1), now);
+        assertEquals(6, competitionMapper.refreshStatuses(now));
+        assertEquals("报名中",competitionMapper.selectById(1L).getStatus());
+        assertEquals("已结束",competitionMapper.selectById(2L).getStatus());
+        assertEquals("即将开始",competitionMapper.selectById(3L).getStatus());
+        assertEquals("报名中",competitionMapper.selectById(4L).getStatus());
+        assertEquals("已结束",competitionMapper.selectById(5L).getStatus());
+        assertEquals("已结束",competitionMapper.selectById(6L).getStatus());
+        assertEquals(0, competitionMapper.refreshStatuses(now));
+        assertEquals(1, competitionMapper.refreshStatuses(now.plusSeconds(1)));
+        assertEquals("报名中",competitionMapper.selectById(3L).getStatus());
+    }
+
+    @Test void competitionScanInvalidatesCachedListAndFilteredReadsSeeNewStatus() {
+        CacheService cache = mock(CacheService.class);
+        CompetitionService service = new CompetitionService(competitionMapper, cache);
+        jdbc.update("UPDATE competition SET status='报名中',signup_end=? WHERE id=100", LocalDateTime.now().minusSeconds(1));
+        assertEquals("报名中",service.list(null,null,null).get(0).getStatus());
+        service.refreshStatuses();
+        verify(cache).delete("cache:competitions");
+        assertEquals("已结束",service.list(null,null,null).get(0).getStatus());
+        assertEquals(1,service.list(null,null,"已结束").size());
+        assertTrue(service.list(null,null,"报名中").isEmpty());
+        service.refreshStatuses();
+        verify(cache,times(2)).delete("cache:competitions");
     }
 
     @Test void upgradesLegacySchemaIdempotentlyAndKeepsData() throws Exception {

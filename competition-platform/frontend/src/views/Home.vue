@@ -219,7 +219,7 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Search,
@@ -320,7 +320,14 @@ function resetFilters() {
 function goTeam(id) {
   router.push({ path: '/teams', query: { competitionId: id } })
 }
-onMounted(load)
+let competitionTimer = null
+onMounted(() => {
+  load()
+  competitionTimer = setInterval(() => {
+    if (!loading.value) load()
+  }, 30000)
+})
+onBeforeUnmount(() => clearInterval(competitionTimer))
 </script>
 <style scoped>
 .today-label {
