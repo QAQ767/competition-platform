@@ -83,6 +83,15 @@
         </div>
       </el-card>
 
+      <el-alert
+        v-if="recruitmentClosed"
+        class="block"
+        title="队伍已结束，不再接受申请或邀请；已有成员仍可查看团队资料。"
+        type="info"
+        :closable="false"
+        show-icon
+      />
+
       <el-card shadow="never" class="block">
         <template #header>团队成员（{{ detail.members.length }}）</template>
         <el-table :data="detail.members" size="small">
@@ -175,6 +184,7 @@
                     <el-button
                       type="success"
                       size="small"
+                      :disabled="recruitmentClosed"
                       @click="handleApply(row, 'approve')"
                       >通过</el-button
                     >
@@ -265,7 +275,11 @@
                     >
                     {{ u.reason }}
                   </div>
-                  <el-button type="primary" size="small" @click="invite(u)"
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :disabled="recruitmentClosed"
+                    @click="invite(u)"
                     >一键邀请</el-button
                   >
                 </el-card>
@@ -517,11 +531,14 @@ const isInTeam = computed(
     !!store.user &&
     detail.value.members.some((m) => m.userId === store.user.id)
 )
+const recruitmentClosed = computed(() => detail.value?.team.status === '已结束')
+let statusTimer = null
 const canApply = computed(
   () =>
     !!detail.value &&
     store.isLogin &&
     !isCaptain.value &&
+    !recruitmentClosed.value &&
     !detail.value.members.some((m) => m.userId === store.user.id) &&
     detail.value.team.status !== '已满员'
 )
@@ -811,9 +828,19 @@ onMounted(() => {
   connectWebSocket()
   unsubDisc = onWsMessage(handleDiscWs)
   load()
+  statusTimer = setInterval(async () => {
+    if (loading.value || !detail.value) return
+    try {
+      const fresh = await api.get(`/teams/${route.params.id}`)
+      if (detail.value) detail.value.team = fresh.team
+    } catch {
+      /* 接口层提示，保留当前页面 */
+    }
+  }, 30000)
 })
 
 onBeforeUnmount(() => {
+  if (statusTimer) clearInterval(statusTimer)
   if (unsubDisc) unsubDisc()
 })
 </script>

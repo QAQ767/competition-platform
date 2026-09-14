@@ -75,6 +75,9 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 | DELETE | /competitions/{id} | — | — |
 
 ### 组队 Team
+
+组队截止规则：后端启动后每 30 秒检查一次，将 `deadline <= 当前时间` 且尚未结束的队伍（招募中、已满员、备赛中）更新为 `已结束`。未设置截止时间的队伍不受影响；已有队员、资料、训练任务保留。申请、邀请、批准申请和接受邀请均即时校验截止时间，不依赖下一轮扫描。到期满员队伍因成员退出或移除出现空位时不会恢复招募。组队广场和详情页每 30 秒刷新状态，已结束队伍关闭申请入口并禁用批准／邀请操作。
+
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|
 | GET | /teams | 可选 query: competitionId,skill,status,keyword | [Team] |

@@ -62,6 +62,7 @@ class PreparationIntegrationTest {
     @Autowired TeamService teams;
     @Autowired NotificationService notifications;
     @Autowired TeamTaskMapper taskMapper;
+    @Autowired TeamMapper teamMapper;
     @Autowired WsPusher ws;
     @Autowired PlatformTransactionManager txManager;
     JdbcTemplate jdbc;
@@ -213,6 +214,52 @@ class PreparationIntegrationTest {
             assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM team_member WHERE team_id=10 AND user_id=3", Integer.class));
             assertEquals(3, jdbc.queryForObject("SELECT member_count FROM team WHERE id=10", Integer.class));
         } finally { pool.shutdownNow(); }
+    }
+
+    @Test void deadlineScanClosesAllExpiredStatusesAtBoundaryAndIsIdempotent() {
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        jdbc.update("UPDATE team SET deadline=?,status='招募中' WHERE id=10", now);
+        jdbc.update("UPDATE team SET deadline=?,status='已满员' WHERE id=20", now.minusSeconds(1));
+        jdbc.update("INSERT INTO team(id,title,captain_id,status,deadline) VALUES(30,'备赛队伍',1,'备赛中',?),(40,'未来队伍',1,'招募中',?),(50,'无截止时间',1,'招募中',NULL)", now.minusDays(1), now.plusSeconds(1));
+        assertEquals(3, teamMapper.closeExpiredTeams(now));
+        assertEquals(0, teamMapper.closeExpiredTeams(now));
+        for (long id : List.of(10L,20L,30L)) assertEquals("已结束", teamMapper.selectById(id).getStatus());
+        assertEquals("招募中", teamMapper.selectById(40L).getStatus());
+        assertEquals("招募中", teamMapper.selectById(50L).getStatus());
+        assertEquals(2, teamMapper.selectById(10L).getMemberCount());
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM team_member WHERE team_id=10", Integer.class));
+    }
+
+    @Test void expiredTeamRejectsEveryAdmissionPathBeforeNextScheduledScan() {
+        teams.invite(10L, 3L, 1L);
+        Long invitation = notifications.list(3L).get(0).getInviteId();
+        jdbc.update("UPDATE team SET deadline=? WHERE id=10", LocalDateTime.now().minusSeconds(1));
+        assertThrows(BusinessException.class, () -> teams.apply(10L,3L,null));
+        assertThrows(BusinessException.class, () -> teams.invite(10L,3L,1L));
+        assertThrows(BusinessException.class, () -> teams.approve(10L,invitation,1L));
+        assertThrows(BusinessException.class, () -> teams.acceptInvite(invitation,3L));
+        assertEquals(2, teamMapper.selectById(10L).getMemberCount());
+        assertEquals("待审批", notifications.list(3L).get(0).getInviteStatus());
+    }
+
+    @Test void endedTeamWithoutDeadlineCannotRecruitAndExpiredFullTeamCannotReopen() {
+        jdbc.update("UPDATE team SET status='已结束' WHERE id=20");
+        assertThrows(BusinessException.class, () -> teams.apply(20L,2L,null));
+        jdbc.update("UPDATE team SET status='已满员',deadline=? WHERE id=10", LocalDateTime.now().minusMinutes(1));
+        teams.leave(10L,2L);
+        assertEquals("已结束", teamMapper.selectById(10L).getStatus());
+        assertEquals(1, teamMapper.selectById(10L).getMemberCount());
+    }
+
+    @Test void scheduledEntryClosesExpiredTeamsAndKeepsEndedStatusAfterEdits() throws Exception {
+        jdbc.update("UPDATE team SET deadline=? WHERE id=10", LocalDateTime.now().minusSeconds(1));
+        new TeamDeadlineScheduler(teamMapper).checkDeadlines();
+        teams.updateDescription(10L,"保留资料",1L);
+        teams.kick(10L,2L,"测试移除",1L);
+        assertEquals("已结束", teamMapper.selectById(10L).getStatus());
+        assertEquals("保留资料", teamMapper.selectById(10L).getDescription());
+        var schedule = TeamDeadlineScheduler.class.getMethod("checkDeadlines").getAnnotation(org.springframework.scheduling.annotation.Scheduled.class);
+        assertEquals(30000, schedule.fixedRate());
     }
 
     @Test void upgradesLegacySchemaIdempotentlyAndKeepsData() throws Exception {

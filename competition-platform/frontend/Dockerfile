@@ -2,8 +2,8 @@
 # 阶段1：Node 构建 dist
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json ./
-RUN npm install --registry=https://registry.npmmirror.com --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci --registry=https://registry.npmmirror.com --no-audit --no-fund
 COPY . .
 RUN npm run build
 

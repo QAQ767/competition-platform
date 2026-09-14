@@ -316,6 +316,7 @@ const hallPage = ref(1)
 const hallPageSize = 30
 const hallLoadedAll = ref(false)
 let hallTimer = null
+let teamStatusTimer = null
 let unsubHall = null
 
 // WebSocket 实时推送：新大厅消息追加（按 id 去重）
@@ -339,6 +340,8 @@ const applyIntro = ref('')
 const applying = ref(false)
 
 async function loadHall() {
+  // 聊天接口需要登录；访客只加载公开队伍，避免 401 将广场跳转到登录页。
+  if (!store.isLogin) return
   hallPage.value = 1
   hallLoadedAll.value = false
   try {
@@ -348,7 +351,7 @@ async function loadHall() {
     hallMsgs.value = data.records || []
     hallLoadedAll.value = (data.records || []).length >= data.total
   } catch (e) {
-    /* 未登录也可看大厅，忽略错误 */
+    /* 接口层提示错误，保留当前消息 */
   }
   nextTick(() => {
     const el = hallListRef.value
@@ -495,6 +498,7 @@ onMounted(() => {
   loadCompetitions()
   load()
   connectWebSocket()
+  teamStatusTimer = setInterval(load, 30000)
   loadHall()
   unsubHall = onWsMessage(handleWs)
   // WS 断开时降级轮询兜底
@@ -504,6 +508,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (teamStatusTimer) clearInterval(teamStatusTimer)
   if (hallTimer) clearInterval(hallTimer)
   if (unsubHall) unsubHall()
 })

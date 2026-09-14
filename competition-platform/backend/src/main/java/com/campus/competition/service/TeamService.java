@@ -135,10 +135,8 @@ public class TeamService {
 
     @Transactional
     public TeamApplication apply(Long teamId, Long userId, ApplyReq req) {
-        Team team = teamMapper.selectById(teamId);
-        if (team == null) {
-            throw new BusinessException("队伍不存在");
-        }
+        Team team = requireTeam(teamId);
+        checkRecruitmentOpen(team);
         if (team.getCaptainId().equals(userId)) {
             throw new BusinessException("你是队长，无需申请");
         }
@@ -181,6 +179,7 @@ public class TeamService {
     public void approve(Long teamId, Long appId, Long operatorId) {
         Team team = requireTeam(teamId);
         checkCaptain(team, operatorId);
+        checkRecruitmentOpen(team);
         TeamApplication application = requireApplication(appId, teamId);
         if (!"待审批".equals(application.getStatus())) {
             throw new BusinessException("该申请已处理");
@@ -230,6 +229,7 @@ public class TeamService {
     public void invite(Long teamId, Long targetUserId, Long operatorId) {
         Team team = requireTeam(teamId);
         checkCaptain(team, operatorId);
+        checkRecruitmentOpen(team);
         User captain = userMapper.selectById(operatorId);
         User target = userMapper.selectById(targetUserId);
         if (target == null) {
@@ -329,6 +329,7 @@ public class TeamService {
             throw new BusinessException("该邀请已处理");
         }
         Team team = requireTeam(application.getTeamId());
+        checkRecruitmentOpen(team);
         application = teamApplicationMapper.selectForUpdate(appId);
         if (application == null || !"待审批".equals(application.getStatus())) {
             throw new BusinessException("该邀请已处理或已失效");
@@ -429,7 +430,7 @@ public class TeamService {
 
         team.setMemberCount(team.getMemberCount() - 1);
         if ("已满员".equals(team.getStatus())) {
-            team.setStatus("招募中");
+            team.setStatus(deadlinePassed(team) ? "已结束" : "招募中");
         }
         teamMapper.updateById(team);
 
@@ -517,7 +518,7 @@ public class TeamService {
 
         team.setMemberCount(team.getMemberCount() - 1);
         if ("已满员".equals(team.getStatus())) {
-            team.setStatus("招募中");
+            team.setStatus(deadlinePassed(team) ? "已结束" : "招募中");
         }
         teamMapper.updateById(team);
 
@@ -560,6 +561,16 @@ public class TeamService {
         teamMemberMapper.delete(
                 new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getTeamId, teamId));
         teamMapper.deleteById(teamId);
+    }
+
+    private boolean deadlinePassed(Team team) {
+        return team.getDeadline() != null && !team.getDeadline().isAfter(LocalDateTime.now());
+    }
+
+    private void checkRecruitmentOpen(Team team) {
+        if ("已结束".equals(team.getStatus()) || deadlinePassed(team)) {
+            throw new BusinessException("队伍已结束或已到组队截止时间，无法继续招募");
+        }
     }
 
     private Team requireTeam(Long teamId) {
