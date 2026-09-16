@@ -285,13 +285,20 @@ function formatDate(value) {
 }
 function deadlineLabel(c) {
   if (c.status === '已结束') return '本期报名已结束'
-  if (c.status === '即将开始') return '即将开放报名'
+  const start = c.signupStart
+    ? new Date(String(c.signupStart).replace(' ', 'T')).getTime()
+    : NaN
+  if (c.status === '即将开始' && start > Date.now()) return '即将开放报名'
   const end = c.signupEnd
     ? new Date(String(c.signupEnd).replace(' ', 'T')).getTime()
     : NaN
   if (Number.isNaN(end)) return '关注报名时间'
   const days = Math.max(0, Math.ceil((end - Date.now()) / 86400000))
-  return days === 0 ? '报名截止临近' : '距报名截止 ' + days + ' 天'
+  return days === 0
+    ? '报名即将截止'
+    : c.status === '即将开始'
+      ? '报名临近截止 · 剩余 ' + days + ' 天'
+      : '距报名截止 ' + days + ' 天'
 }
 let requestId = 0
 async function load() {

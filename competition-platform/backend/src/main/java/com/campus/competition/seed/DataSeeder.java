@@ -189,6 +189,10 @@ public class DataSeeder implements CommandLineRunner {
                 {"ACM校赛", "校计算机学院", "校级", now.minusDays(5), now.plusDays(10), now.plusDays(15), "ACM-ICPC 校内选拔赛，算法与数据结构巅峰对决。"},
                 {"互联网+", "教育部", "国家级", now.minusDays(160), now.minusDays(100), now.minusDays(90), "中国国际大学生创新大赛（原互联网+），创新创业项目路演。"},
                 {"挑战杯", "共青团中央", "省级", now.plusDays(45), now.plusDays(105), now.plusDays(120), "挑战杯全国大学生课外学术科技作品竞赛。"},
+                {"校园程序设计秋季赛（演示）", "校竞赛中心", "校级", now.minusDays(2), now.plusDays(4), now.plusDays(10), "平台演示用校内算法训练赛，面向程序设计与数据结构练习。"},
+                {"校园数据分析挑战赛（演示）", "校竞赛中心", "校级", now.minusDays(1), now.plusDays(16), now.plusDays(25), "平台演示用校内数据分析训练赛，练习清洗、建模与可视化。"},
+                {"校园网络安全闯关赛（演示）", "校竞赛中心", "校级", now.minusDays(1), now.plusDays(27), now.plusDays(35), "平台演示用校内网络安全训练赛，覆盖基础安全知识与攻防实践。"},
+                {"校园创新项目路演赛（演示）", "校竞赛中心", "校级", now.minusDays(1), now.plusDays(40), now.plusDays(48), "平台演示用校内创新项目展示活动，练习项目表达与答辩。"},
         };
         Map<String, Long> idMap = new HashMap<>();
         for (Object[] row : data) {
@@ -434,11 +438,14 @@ public class DataSeeder implements CommandLineRunner {
 
     private String computeStatus(LocalDateTime signupStart, LocalDateTime signupEnd) {
         LocalDateTime now = LocalDateTime.now();
-        if (signupStart != null && now.isBefore(signupStart)) {
+        if (signupEnd != null && !now.isBefore(signupEnd)) {
+            return "已结束";
+        }
+        if (signupEnd != null && signupEnd.isBefore(now.plusDays(7))) {
             return "即将开始";
         }
-        if (signupEnd != null && now.isAfter(signupEnd)) {
-            return "已结束";
+        if (signupStart != null && now.isBefore(signupStart)) {
+            return "即将开始";
         }
         return "报名中";
     }

@@ -96,7 +96,8 @@ public class CompetitionService {
     // 与列表缓存读写使用同一把锁，避免扫描清缓存后旧查询再次写回旧状态。
     @Scheduled(fixedRate = 30_000, initialDelay = 30_000)
     public synchronized void refreshStatuses() {
-        int changed = competitionMapper.refreshStatuses(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        int changed = competitionMapper.refreshStatuses(now, now.plusDays(7));
         // 每轮均清理，上一轮 Redis 暂时不可用时下一轮仍能重试失效。
         cacheService.delete(CACHE_KEY);
         if (changed > 0) log.info("竞赛时间检查：已更新 {} 项竞赛的报名状态", changed);
@@ -117,6 +118,9 @@ public class CompetitionService {
         LocalDateTime now = LocalDateTime.now();
         if (signupEnd != null && !now.isBefore(signupEnd)) {
             return "已结束";
+        }
+        if (signupEnd != null && signupEnd.isBefore(now.plusDays(7))) {
+            return "即将开始";
         }
         if (signupStart != null && now.isBefore(signupStart)) {
             return "即将开始";

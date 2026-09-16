@@ -7,12 +7,15 @@ public interface CompetitionMapper extends BaseMapper<Competition> {
     @org.apache.ibatis.annotations.Update("""
         UPDATE competition SET status = CASE
           WHEN signup_end <= #{now} THEN '已结束'
+          WHEN signup_end < #{oneWeekLater} THEN '即将开始'
           WHEN signup_start > #{now} THEN '即将开始'
           ELSE '报名中' END
         WHERE status IS NULL OR status <> CASE
           WHEN signup_end <= #{now} THEN '已结束'
+          WHEN signup_end < #{oneWeekLater} THEN '即将开始'
           WHEN signup_start > #{now} THEN '即将开始'
           ELSE '报名中' END
         """)
-    int refreshStatuses(@org.apache.ibatis.annotations.Param("now") java.time.LocalDateTime now);
+    int refreshStatuses(@org.apache.ibatis.annotations.Param("now") java.time.LocalDateTime now,
+                        @org.apache.ibatis.annotations.Param("oneWeekLater") java.time.LocalDateTime oneWeekLater);
 }

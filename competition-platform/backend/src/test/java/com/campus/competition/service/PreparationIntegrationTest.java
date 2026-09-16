@@ -266,18 +266,21 @@ class PreparationIntegrationTest {
     @Test void competitionStatusTransitionsRespectExactStartAndEndAndMissingDates() {
         LocalDateTime now = LocalDateTime.now().withNano(0);
         jdbc.update("DELETE FROM competition");
-        jdbc.update("INSERT INTO competition(id,name,status,signup_start,signup_end) VALUES (1,'开始边界','即将开始',?,?),(2,'截止边界','报名中',?,?),(3,'未开始','报名中',?,?),(4,'无日期',NULL,NULL,NULL),(5,'仅截止','报名中',NULL,?),(6,'矛盾历史日期','报名中',?,?)",
-                now, now.plusDays(1), now.minusDays(1), now, now.plusSeconds(1), now.plusDays(1), now.minusSeconds(1), now.plusDays(1), now);
-        assertEquals(6, competitionMapper.refreshStatuses(now));
+        jdbc.update("INSERT INTO competition(id,name,status,signup_start,signup_end) VALUES (1,'开始边界','即将开始',?,?),(2,'截止边界','报名中',?,?),(3,'未开始','报名中',?,?),(4,'无日期',NULL,NULL,NULL),(5,'仅截止','报名中',NULL,?),(6,'矛盾历史日期','报名中',?,?),(7,'恰好七天','即将开始',NULL,?),(8,'不足七天','报名中',NULL,?)",
+                now, now.plusDays(8), now.minusDays(1), now, now.plusSeconds(1), now.plusDays(8), now.minusSeconds(1), now.plusDays(1), now, now.plusDays(7), now.plusDays(7).minusSeconds(1));
+        assertEquals(8, competitionMapper.refreshStatuses(now, now.plusDays(7)));
         assertEquals("报名中",competitionMapper.selectById(1L).getStatus());
         assertEquals("已结束",competitionMapper.selectById(2L).getStatus());
         assertEquals("即将开始",competitionMapper.selectById(3L).getStatus());
         assertEquals("报名中",competitionMapper.selectById(4L).getStatus());
         assertEquals("已结束",competitionMapper.selectById(5L).getStatus());
         assertEquals("已结束",competitionMapper.selectById(6L).getStatus());
-        assertEquals(0, competitionMapper.refreshStatuses(now));
-        assertEquals(1, competitionMapper.refreshStatuses(now.plusSeconds(1)));
+        assertEquals("报名中",competitionMapper.selectById(7L).getStatus());
+        assertEquals("即将开始",competitionMapper.selectById(8L).getStatus());
+        assertEquals(0, competitionMapper.refreshStatuses(now, now.plusDays(7)));
+        assertEquals(2, competitionMapper.refreshStatuses(now.plusSeconds(1), now.plusDays(7).plusSeconds(1)));
         assertEquals("报名中",competitionMapper.selectById(3L).getStatus());
+        assertEquals("即将开始",competitionMapper.selectById(7L).getStatus());
     }
 
     @Test void competitionScanInvalidatesCachedListAndFilteredReadsSeeNewStatus() {
