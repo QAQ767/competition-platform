@@ -23,17 +23,23 @@
             </el-table-column>
             <el-table-column prop="signupStart" label="报名开始" width="160" />
             <el-table-column prop="signupEnd" label="报名截止" width="160" />
-            <el-table-column label="状态" width="90">
+            <el-table-column prop="startTime" label="比赛开始" width="160" />
+            <el-table-column label="状态" min-width="185">
               <template #default="{ row }">
-                <el-tag
-                  :type="
-                    { 报名中: 'success', 即将开始: 'warning', 已结束: 'info' }[
-                      row.status
-                    ]
-                  "
-                  size="small"
-                  >{{ row.status }}</el-tag
-                >
+                <div class="competition-tags">
+                  <el-tag
+                    :type="COMPETITION_STATUS_TYPE[row.status] || 'info'"
+                    size="small"
+                    >{{ competitionStatusLabel(row.status) }}</el-tag
+                  >
+                  <el-tag
+                    v-if="isCompetitionStartingSoon(row)"
+                    type="danger"
+                    size="small"
+                    effect="plain"
+                    >即将开赛</el-tag
+                  >
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="90">
@@ -373,6 +379,11 @@ import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import {
+  COMPETITION_STATUS_TYPE,
+  competitionStatusLabel,
+  isCompetitionStartingSoon
+} from '../utils/competitionStatus'
+import {
   LEVELS,
   TRAINING_COMPETITIONS,
   TRAINING_DIFFICULTY
@@ -658,5 +669,10 @@ onBeforeUnmount(() => clearInterval(competitionTimer))
 .card-head {
   display: flex;
   justify-content: flex-end;
+}
+.competition-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 </style>

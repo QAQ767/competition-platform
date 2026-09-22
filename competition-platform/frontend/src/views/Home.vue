@@ -137,10 +137,10 @@
           clearable
           @change="load"
           ><el-option
-            v-for="s in ['报名中', '即将开始', '已结束']"
-            :key="s"
-            :label="s"
-            :value="s" /></el-select
+            v-for="option in COMPETITION_FILTER_OPTIONS"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value" /></el-select
         ><el-button type="primary" :loading="loading" @click="load"
           >搜索竞赛</el-button
         ></el-card
@@ -176,10 +176,21 @@
           </div>
           <div class="comp-body">
             <div class="comp-head">
-              <el-tag :type="statusType(c.status)" size="small">{{
-                c.status
-              }}</el-tag
-              ><span class="comp-level">{{ c.level }}</span>
+              <div class="comp-tags">
+                <el-tag
+                  :type="COMPETITION_STATUS_TYPE[c.status] || 'info'"
+                  size="small"
+                  >{{ competitionStatusLabel(c.status) }}</el-tag
+                >
+                <el-tag
+                  v-if="isCompetitionStartingSoon(c)"
+                  type="danger"
+                  size="small"
+                  effect="plain"
+                  >即将开赛</el-tag
+                >
+              </div>
+              <span class="comp-level">{{ c.level }}</span>
             </div>
             <h3>{{ c.name }}</h3>
             <p class="comp-desc">
@@ -192,6 +203,10 @@
             <div class="comp-meta">
               <el-icon><Calendar /></el-icon
               ><span>报名截止 {{ formatDate(c.signupEnd) }}</span>
+            </div>
+            <div v-if="c.startTime" class="comp-meta">
+              <el-icon><Calendar /></el-icon
+              ><span>比赛开始 {{ formatDate(c.startTime) }}</span>
             </div>
             <div class="comp-footer">
               <span
@@ -233,6 +248,12 @@ import {
 } from '@element-plus/icons-vue'
 import api from '../api'
 import { LEVELS } from '../utils/constants'
+import {
+  COMPETITION_STATUS_TYPE,
+  COMPETITION_FILTER_OPTIONS,
+  competitionStatusLabel,
+  isCompetitionStartingSoon
+} from '../utils/competitionStatus'
 const router = useRouter()
 const keyword = ref(''),
   level = ref(''),
@@ -277,9 +298,6 @@ function competitionIcon(name = '') {
         ? Cpu
         : Trophy
 }
-function statusType(s) {
-  return { 报名中: 'success', 即将开始: 'warning', 已结束: 'info' }[s] || 'info'
-}
 function formatDate(value) {
   return value ? String(value).slice(0, 10).replace(/-/g, '.') : '待公布'
 }
@@ -288,7 +306,7 @@ function deadlineLabel(c) {
   const start = c.signupStart
     ? new Date(String(c.signupStart).replace(' ', 'T')).getTime()
     : NaN
-  if (c.status === '即将开始' && start > Date.now()) return '即将开放报名'
+  if (c.status === '即将报名' && start > Date.now()) return '即将开放报名'
   const end = c.signupEnd
     ? new Date(String(c.signupEnd).replace(' ', 'T')).getTime()
     : NaN
@@ -296,7 +314,7 @@ function deadlineLabel(c) {
   const days = Math.max(0, Math.ceil((end - Date.now()) / 86400000))
   return days === 0
     ? '报名即将截止'
-    : c.status === '即将开始'
+    : c.status === '报名即将截止'
       ? '报名临近截止 · 剩余 ' + days + ' 天'
       : '距报名截止 ' + days + ' 天'
 }
@@ -662,6 +680,11 @@ onBeforeUnmount(() => clearInterval(competitionTimer))
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+}
+.comp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .comp-level {
   font-size: 10px;

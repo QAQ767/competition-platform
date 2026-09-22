@@ -18,7 +18,7 @@
 User:  { id, username, nickname, avatar, email, college, major, intro,
          role("STUDENT"/"ADMIN"), competeStatus, skills:[{id,name}], createdAt }
 Competition: { id, name, organizer, level("校级"/"省级"/"国家级"), signupStart,
-               signupEnd, startTime, description, status("报名中"/"即将开始"/"已结束") }
+               signupEnd, startTime, description, status("报名中"/"即将报名"/"报名即将截止"/"已结束") }
 Team:  { id, competitionId, competitionName, captainId, captainName, title,
          description, memberCount, maxMembers, status("招募中"/"已满员"/"备赛中"/"已结束"),
          deadline, skills:[String 技能名], createdAt }
@@ -69,7 +69,7 @@ Stats: { userCount, teamCount, competitionCount, achievementCount,
 
 ### 竞赛 Competition
 
-竞赛报名状态由后台每 30 秒自动维护，并清理无筛选列表的 Redis 缓存：`signupEnd <= 当前时间` 为“已结束”；尚未截止且距离报名截止**严格不足 7 天**时为“即将开始”；报名开始时间还未到时也为“即将开始”；其余为“报名中”。准确到达截止时刻即视为报名结束，恰好剩余 7 天不触发临近截止状态。首页会区分“即将开放报名”和“报名临近截止”两类提示。当前“已结束”仅指报名结束，不代表实际赛事已经结束；`startTime` 是开赛时间。首页和竞赛管理页每 30 秒刷新列表。
+竞赛报名状态由后台每 30 秒自动维护，并清理无筛选列表的 Redis 缓存：`signupEnd <= 当前时间` 为“已结束”；否则 `signupStart > 当前时间` 为“即将报名”；否则距离报名截止**严格不足 7 天**为“报名即将截止”；其余为“报名中”。准确到达截止时刻即视为报名结束，恰好剩余 7 天不触发临近截止状态。`startTime` 是独立的开赛时间：未来**严格不足 7 天**开赛时，首页与竞赛管理页额外显示“即将开赛”标签，`status=即将开赛` 可筛选这类竞赛；标签可以与“已结束”同时出现，因为“已结束”仅指报名结束。首页和竞赛管理页每 30 秒刷新列表。
 
 | 方法 | 路径 | 请求 | 返回 data |
 |---|---|---|---|

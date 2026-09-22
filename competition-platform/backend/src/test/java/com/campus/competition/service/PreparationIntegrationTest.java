@@ -271,16 +271,29 @@ class PreparationIntegrationTest {
         assertEquals(8, competitionMapper.refreshStatuses(now, now.plusDays(7)));
         assertEquals("报名中",competitionMapper.selectById(1L).getStatus());
         assertEquals("已结束",competitionMapper.selectById(2L).getStatus());
-        assertEquals("即将开始",competitionMapper.selectById(3L).getStatus());
+        assertEquals("即将报名",competitionMapper.selectById(3L).getStatus());
         assertEquals("报名中",competitionMapper.selectById(4L).getStatus());
         assertEquals("已结束",competitionMapper.selectById(5L).getStatus());
         assertEquals("已结束",competitionMapper.selectById(6L).getStatus());
         assertEquals("报名中",competitionMapper.selectById(7L).getStatus());
-        assertEquals("即将开始",competitionMapper.selectById(8L).getStatus());
+        assertEquals("报名即将截止",competitionMapper.selectById(8L).getStatus());
         assertEquals(0, competitionMapper.refreshStatuses(now, now.plusDays(7)));
         assertEquals(2, competitionMapper.refreshStatuses(now.plusSeconds(1), now.plusDays(7).plusSeconds(1)));
         assertEquals("报名中",competitionMapper.selectById(3L).getStatus());
-        assertEquals("即将开始",competitionMapper.selectById(7L).getStatus());
+        assertEquals("报名即将截止",competitionMapper.selectById(7L).getStatus());
+    }
+
+    @Test void competitionStartingSoonFilterUsesStartTimeSeparatelyFromSignupStatus() {
+        CacheService cache = mock(CacheService.class);
+        CompetitionService service = new CompetitionService(competitionMapper, cache);
+        LocalDateTime now = LocalDateTime.now();
+        jdbc.update("DELETE FROM competition");
+        jdbc.update("INSERT INTO competition(id,name,status,start_time) VALUES (1,'临近开赛','已结束',?),(2,'稍后开赛','即将报名',?),(3,'已经开赛','报名中',?)",
+                now.plusDays(2), now.plusDays(8), now.minusDays(1));
+        var startingSoon = service.list(null, null, "即将开赛");
+        assertEquals(1, startingSoon.size());
+        assertEquals(1L, startingSoon.get(0).getId());
+        assertEquals("已结束", startingSoon.get(0).getStatus());
     }
 
     @Test void competitionScanInvalidatesCachedListAndFilteredReadsSeeNewStatus() {

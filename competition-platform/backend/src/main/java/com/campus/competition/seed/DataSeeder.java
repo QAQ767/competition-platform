@@ -441,11 +441,11 @@ public class DataSeeder implements CommandLineRunner {
         if (signupEnd != null && !now.isBefore(signupEnd)) {
             return "已结束";
         }
-        if (signupEnd != null && signupEnd.isBefore(now.plusDays(7))) {
-            return "即将开始";
-        }
         if (signupStart != null && now.isBefore(signupStart)) {
-            return "即将开始";
+            return "即将报名";
+        }
+        if (signupEnd != null && signupEnd.isBefore(now.plusDays(7))) {
+            return "报名即将截止";
         }
         return "报名中";
     }

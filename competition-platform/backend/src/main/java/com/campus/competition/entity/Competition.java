@@ -26,7 +26,7 @@ public class Competition {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
     private String description;
-    /** 报名中 / 即将开始 / 已结束 */
+    /** 报名中 / 即将报名 / 报名即将截止 / 已结束；即将开赛由 startTime 独立判断 */
     private String status;
 
     public Long getId() {
