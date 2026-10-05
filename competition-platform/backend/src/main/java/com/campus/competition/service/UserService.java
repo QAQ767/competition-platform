@@ -69,6 +69,10 @@ public class UserService {
         LambdaUpdateWrapper<User> update = new LambdaUpdateWrapper<User>().eq(User::getId, userId);
         update.set(req.getNickname() != null && !req.getNickname().isBlank(), User::getNickname, req.getNickname());
         update.set(req.getIntro() != null, User::getIntro, req.getIntro());
+        update.set(req.getProjectExperience() != null, User::getProjectExperience, req.getProjectExperience());
+        update.set(req.getPreferredRoles() != null, User::getPreferredRoles, req.getPreferredRoles());
+        update.set(req.getWeeklyHours() != null, User::getWeeklyHours, req.getWeeklyHours());
+
         update.set(req.getAvatar() != null, User::getAvatar, req.getAvatar());
         update.set(req.getCollege() != null, User::getCollege, req.getCollege());
         update.set(req.getMajor() != null, User::getMajor, req.getMajor());

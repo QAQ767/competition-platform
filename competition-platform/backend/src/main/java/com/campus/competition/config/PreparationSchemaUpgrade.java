@@ -31,6 +31,9 @@ public class PreparationSchemaUpgrade implements CommandLineRunner {
         addColumn("team_task", "completion_note", "VARCHAR(1000)");
         addColumn("team_task", "completed_at", "DATETIME");
         addColumn("notification", "invite_id", "BIGINT");
+        addColumn("users", "project_experience", "VARCHAR(3000)");
+        addColumn("users", "preferred_roles", "VARCHAR(100)");
+        addColumn("users", "weekly_hours", "INT");
     }
 
     private void addColumn(String table, String column, String definition) throws SQLException {

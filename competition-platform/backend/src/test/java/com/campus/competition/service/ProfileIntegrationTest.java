@@ -79,6 +79,20 @@ class ProfileIntegrationTest {
 
     @AfterEach void cleanup() { UserContext.clear(); }
 
+    @Test void collaborationProfilePersistsAndAvatarUpdatePreservesIt() throws Exception {
+        mvc.perform(put("/api/user/profile").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"intro\":\"希望做后端\",\"projectExperience\":\"校园商城：负责订单接口\",\"preferredRoles\":\"后端开发、测试\",\"weeklyHours\":12}"))
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.projectExperience").value("校园商城：负责订单接口"))
+                .andExpect(jsonPath("$.data.weeklyHours").value(12));
+        ProfileReq avatar = new ProfileReq(); avatar.setAvatar("/replacement.png");
+        assertEquals("后端开发、测试", users.updateProfile(1L, avatar).getPreferredRoles());
+        assertEquals(12, userMapper.selectById(1).getWeeklyHours());
+        mvc.perform(put("/api/user/profile").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"weeklyHours\":81}"))
+                .andExpect(jsonPath("$.code").value(500));
+    }
+
     @Test void emailUpdateTrimsPersistsAndReturnsCompleteProfile() throws Exception {
         mvc.perform(put("/api/user/profile").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"  new@example.com  \",\"id\":2,\"role\":\"ADMIN\"}"))

@@ -18,6 +18,17 @@ public class RecommendUserVO {
     /** 推荐理由来源：LLM / RULE */
     private String reasonSource;
     private Boolean hasExperience;
+    private String suggestedRole;
+    private String uncertainty;
+    private String teamAnalysis;
+
+
+    public String getSuggestedRole() { return suggestedRole; }
+    public void setSuggestedRole(String value) { suggestedRole = value; }
+    public String getUncertainty() { return uncertainty; }
+    public void setUncertainty(String value) { uncertainty = value; }
+    public String getTeamAnalysis() { return teamAnalysis; }
+    public void setTeamAnalysis(String value) { teamAnalysis = value; }
 
     public Long getUserId() {
         return userId;

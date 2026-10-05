@@ -34,6 +34,10 @@ public final class UserVOHelper {
         vo.setCollege(user.getCollege());
         vo.setMajor(user.getMajor());
         vo.setIntro(user.getIntro());
+        vo.setProjectExperience(user.getProjectExperience());
+        vo.setPreferredRoles(user.getPreferredRoles());
+        vo.setWeeklyHours(user.getWeeklyHours());
+
         vo.setRole(user.getRole());
         vo.setCompeteStatus(user.getCompeteStatus());
         vo.setCreatedAt(user.getCreatedAt());

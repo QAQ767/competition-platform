@@ -209,13 +209,16 @@
           </el-tab-pane>
 
           <el-tab-pane v-if="isCaptain" label="AI 推荐队友" name="ai">
+            <el-button :loading="aiLoading" :disabled="recruitmentClosed" @click="loadRecommend" style="margin-bottom:12px">重新分析队友</el-button>
             <el-alert
               type="success"
               :closable="false"
               show-icon
-              title="AI 按「技能契合度40% + 竞赛方向30% + 参赛状态20% + 经验10%」加权匹配，只推荐愿意被邀请的用户"
+              title="小智结合队伍目标、现有成员、个人简介与项目经历分析技能互补、角色与时间。仅推荐愿意被邀请的用户；资料属于自述，邀请前请沟通确认。"
               style="margin-bottom: 16px"
             />
+            <el-alert v-if="recommendList[0]?.teamAnalysis" :title="recommendList[0].teamAnalysis" type="success" :closable="false" style="margin-bottom:16px" />
+            <el-alert v-if="!aiLoading && recommendList.length && recommendList[0].reasonSource !== 'LLM'" title="小智暂未返回有效分析，目前展示规则匹配结果。" type="warning" :closable="false" style="margin-bottom:16px" />
             <el-row :gutter="16" v-loading="aiLoading">
               <el-col
                 :xs="24"
@@ -274,6 +277,8 @@
                       >匹配分析</el-tag
                     >
                     {{ u.reason }}
+                    <p v-if="u.suggestedRole">建议角色：{{ u.suggestedRole }}</p>
+                    <p v-if="u.uncertainty">待确认：{{ u.uncertainty }}</p>
                   </div>
                   <el-button
                     type="primary"
@@ -684,7 +689,7 @@ async function loadRecommend() {
   aiLoading.value = true
   try {
     recommendList.value = await api.get('/ai/recommend', {
-      params: { teamId: detail.value.team.id }
+      params: { teamId: detail.value.team.id }, timeout: 130000
     })
   } finally {
     aiLoading.value = false

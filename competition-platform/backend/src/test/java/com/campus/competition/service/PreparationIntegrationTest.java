@@ -315,9 +315,14 @@ class PreparationIntegrationTest {
         JdbcTemplate old = new JdbcTemplate(legacy);
         old.execute("CREATE TABLE IF NOT EXISTS team_task(id BIGINT PRIMARY KEY, title VARCHAR(100))");
         old.execute("CREATE TABLE IF NOT EXISTS notification(id BIGINT PRIMARY KEY, content VARCHAR(500))");
+        old.execute("CREATE TABLE IF NOT EXISTS users(id BIGINT PRIMARY KEY, intro VARCHAR(500))");
+        old.update("INSERT INTO users(id,intro) VALUES(1,'保留旧简介')");
         old.update("INSERT INTO team_task(id,title) VALUES(1,'保留旧任务')");
         PreparationSchemaUpgrade upgrade = new PreparationSchemaUpgrade(legacy);
         upgrade.run(); upgrade.run();
+        assertEquals("保留旧简介", old.queryForObject("SELECT intro FROM users WHERE id=1", String.class));
+        old.update("UPDATE users SET project_experience='接口开发', preferred_roles='后端', weekly_hours=10 WHERE id=1");
+        assertEquals(10, old.queryForObject("SELECT weekly_hours FROM users WHERE id=1", Integer.class));
         assertEquals("保留旧任务", old.queryForObject("SELECT title FROM team_task WHERE id=1", String.class));
         assertEquals("准备阶段", old.queryForObject("SELECT phase FROM team_task WHERE id=1", String.class));
         assertEquals("普通", old.queryForObject("SELECT priority FROM team_task WHERE id=1", String.class));

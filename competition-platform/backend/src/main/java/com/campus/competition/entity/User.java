@@ -23,6 +23,10 @@ public class User {
     private String college;
     private String major;
     private String intro;
+    private String projectExperience;
+    private String preferredRoles;
+    private Integer weeklyHours;
+
     private String role;
     /** 参赛状态: WANT_INVITE / ACCEPT_INVITE / NOT_PARTICIPATE / ONLY_VIEW */
     private String competeStatus;
@@ -92,6 +96,16 @@ public class User {
     public void setMajor(String major) {
         this.major = major;
     }
+
+
+    public String getProjectExperience() { return projectExperience; }
+    public void setProjectExperience(String value) { this.projectExperience = value; }
+
+    public String getPreferredRoles() { return preferredRoles; }
+    public void setPreferredRoles(String value) { this.preferredRoles = value; }
+
+    public Integer getWeeklyHours() { return weeklyHours; }
+    public void setWeeklyHours(Integer value) { this.weeklyHours = value; }
 
     public String getIntro() {
         return intro;

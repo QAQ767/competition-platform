@@ -9,7 +9,16 @@ import javax.validation.constraints.Size;
 public class ProfileReq {
 
     private String nickname;
+    @Size(max = 500)
     private String intro;
+    @Size(max = 3000)
+    private String projectExperience;
+    @Size(max = 100)
+    private String preferredRoles;
+    @javax.validation.constraints.Min(0)
+    @javax.validation.constraints.Max(80)
+    private Integer weeklyHours;
+
     private String avatar;
     private String college;
     private String major;
@@ -32,6 +41,16 @@ public class ProfileReq {
     public void setNickname(String nickname) {
         this.nickname = nickname;
     }
+
+
+    public String getProjectExperience() { return projectExperience; }
+    public void setProjectExperience(String value) { this.projectExperience = value; }
+
+    public String getPreferredRoles() { return preferredRoles; }
+    public void setPreferredRoles(String value) { this.preferredRoles = value; }
+
+    public Integer getWeeklyHours() { return weeklyHours; }
+    public void setWeeklyHours(Integer value) { this.weeklyHours = value; }
 
     public String getIntro() {
         return intro;

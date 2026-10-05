@@ -27,7 +27,7 @@ public class LlmProperties {
     private String apiKey = "";
 
     /** 单次调用超时（秒），超时自动降级规则引擎 */
-    private long timeoutSeconds = 15;
+    private long timeoutSeconds = 120;
 
     /** 小智训练问答超时（秒） */
     private long assistantTimeoutSeconds = 120;

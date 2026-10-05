@@ -21,6 +21,9 @@
             {{ home?.user?.college || '—' }} · {{ home?.user?.major || '—' }}
           </div>
           <div class="user-meta">简介：{{ home?.user?.intro || '—' }}</div>
+          <div class="user-meta" style="white-space:pre-wrap">项目 / 竞赛经历：{{ home?.user?.projectExperience || '尚未填写' }}</div>
+          <div class="user-meta">期望角色：{{ home?.user?.preferredRoles || '尚未填写' }}</div>
+          <div class="user-meta">每周投入：{{ home?.user?.weeklyHours ? `${home.user.weeklyHours} 小时` : '暂未确定' }}</div>
           <div class="user-meta">
             粉丝 {{ home?.followerCount }} · 关注 {{ home?.followingCount }} ｜
             参赛状态：

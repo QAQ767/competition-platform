@@ -14,11 +14,9 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collections;
-import java.util.List;
 
 /**
- * 大模型服务（AI 推荐理由生成）
+ * 大模型服务（组队分析与内容审核）
  *
  * 支持两种 provider：
  *  - ollama：本地模型（默认 deepseek-r1:7b），完全离线，无需 API Key
@@ -45,16 +43,24 @@ public class LlmService {
     }
 
     /**
-     * 生成推荐理由文本；任何失败返回 null
+     * 生成普通文本；任何失败返回 null
      */
     public String generate(String prompt) {
+        return generate(prompt, false);
+    }
+
+    public String generateAssessment(String prompt) {
+        return generate(prompt, true);
+    }
+
+    private String generate(String prompt, boolean assessment) {
         if (!properties.isEnabled() || prompt == null) {
             return null;
         }
         try {
             switch (properties.getProvider()) {
                 case "ollama":
-                    return callOllama(prompt);
+                    return callOllama(prompt, assessment);
                 case "deepseek":
                     return callDeepSeek(prompt);
                 default:
@@ -67,17 +73,18 @@ public class LlmService {
     }
 
     /** Ollama /api/chat（本地模型） */
-    private String callOllama(String prompt) throws Exception {
+    private String callOllama(String prompt, boolean assessment) throws Exception {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", properties.getModel());
         body.put("stream", false);
+        if (assessment) body.set("format", objectMapper.readTree(TeamAiAssessment.SCHEMA));
         ArrayNode messages = body.putArray("messages");
         ObjectNode userMsg = messages.addObject();
         userMsg.put("role", "user");
         userMsg.put("content", prompt);
         ObjectNode options = body.putObject("options");
-        options.put("temperature", 0.7);
-        options.put("num_predict", 400);
+        options.put("temperature", 0.2);
+        options.put("num_predict", 2400);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -100,7 +107,7 @@ public class LlmService {
         body.put("model", properties.getModel().isBlank() ? "deepseek-chat" : properties.getModel());
         body.put("stream", false);
         body.put("temperature", 0.7);
-        body.put("max_tokens", 400);
+        body.put("max_tokens", 2400);
         ArrayNode messages = body.putArray("messages");
         ObjectNode userMsg = messages.addObject();
         userMsg.put("role", "user");

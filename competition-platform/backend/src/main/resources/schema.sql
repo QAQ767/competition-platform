@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS users (
     college        VARCHAR(100),
     major          VARCHAR(100),
     intro          VARCHAR(500),
+    project_experience VARCHAR(3000),
+    preferred_roles VARCHAR(100),
+    weekly_hours INT,
     role           VARCHAR(20)  NOT NULL DEFAULT 'STUDENT',
     compete_status VARCHAR(20)  NOT NULL DEFAULT 'NOT_PARTICIPATE',
     created_at     DATETIME     DEFAULT CURRENT_TIMESTAMP

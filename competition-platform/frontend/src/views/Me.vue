@@ -37,6 +37,9 @@
         <el-descriptions-item label="简介">{{
           store.user?.intro || '—'
         }}</el-descriptions-item>
+        <el-descriptions-item label="项目 / 竞赛经历" :span="2"><div style="white-space:pre-wrap">{{ store.user?.projectExperience || '尚未填写' }}</div></el-descriptions-item>
+        <el-descriptions-item label="期望角色">{{ store.user?.preferredRoles || '尚未填写' }}</el-descriptions-item>
+        <el-descriptions-item label="每周投入">{{ store.user?.weeklyHours ? `${store.user.weeklyHours} 小时` : '暂未确定' }}</el-descriptions-item>
       </el-descriptions>
       <div class="skills-line">
         <span class="label">技能标签：</span>
@@ -254,9 +257,23 @@
             v-model="editForm.intro"
             type="textarea"
             :rows="3"
-            placeholder="写上你的擅长方向，更容易被 AI 推荐"
+            maxlength="500"
+            show-word-limit
+            placeholder="介绍擅长方向、参赛目标和合作偏好，供小智分析组队适配性"
           />
         </el-form-item>
+        <el-form-item label="项目经历" prop="projectExperience">
+          <el-input v-model="editForm.projectExperience" type="textarea" :rows="5" maxlength="3000" show-word-limit placeholder="每个项目写一段：项目名称、本人职责、使用技术、完成的工作或成果。请如实填写。" />
+        </el-form-item>
+        <el-form-item label="期望角色">
+          <el-select v-model="profileRoles" multiple filterable allow-create default-first-option placeholder="选择或输入希望承担的角色" style="width:100%">
+            <el-option v-for="role in ['前端开发','后端开发','算法与建模','数据分析','UI设计','测试','文档写作','答辩演讲']" :key="role" :label="role" :value="role" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="每周时间">
+          <el-input-number v-model="editForm.weeklyHours" :min="0" :max="80" :precision="0" /> <span style="margin-left:8px">小时（0 表示暂未确定）</span>
+        </el-form-item>
+        <el-alert title="简介、经历、角色与时间将在个人主页展示，并用于组队分析；这些信息属于自述，请勿填写联系方式或敏感资料。" type="info" :closable="false" />
       </el-form>
       <template #footer>
         <el-button :disabled="saving" @click="editVisible = false"
@@ -271,7 +288,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
@@ -296,7 +313,14 @@ const editForm = reactive({
   college: '',
   major: '',
   intro: '',
+  projectExperience: '',
+  preferredRoles: '',
+  weeklyHours: 0,
   email: ''
+})
+const profileRoles = computed({
+  get: () => editForm.preferredRoles.split('、').filter(Boolean),
+  set: (roles) => { editForm.preferredRoles = roles.join('、') }
 })
 const profileForm = ref()
 const profileRules = {
@@ -396,6 +420,9 @@ function openEdit() {
   editForm.nickname = store.user?.nickname || ''
   editForm.college = store.user?.college || ''
   editForm.major = store.user?.major || ''
+  editForm.projectExperience = store.user?.projectExperience || ''
+  editForm.preferredRoles = store.user?.preferredRoles || ''
+  editForm.weeklyHours = store.user?.weeklyHours ?? 0
   editForm.intro = store.user?.intro || ''
   editForm.email = store.user?.email || ''
   editVisible.value = true

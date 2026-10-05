@@ -18,6 +18,10 @@ public class UserVO {
     private String college;
     private String major;
     private String intro;
+    private String projectExperience;
+    private String preferredRoles;
+    private Integer weeklyHours;
+
     private String role;
     private String competeStatus;
     private List<SkillVO> skills;
@@ -79,6 +83,16 @@ public class UserVO {
     public void setMajor(String major) {
         this.major = major;
     }
+
+
+    public String getProjectExperience() { return projectExperience; }
+    public void setProjectExperience(String value) { this.projectExperience = value; }
+
+    public String getPreferredRoles() { return preferredRoles; }
+    public void setPreferredRoles(String value) { this.preferredRoles = value; }
+
+    public Integer getWeeklyHours() { return weeklyHours; }
+    public void setWeeklyHours(Integer value) { this.weeklyHours = value; }
 
     public String getIntro() {
         return intro;
