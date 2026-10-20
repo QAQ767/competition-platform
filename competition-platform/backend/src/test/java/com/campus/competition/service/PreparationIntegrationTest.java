@@ -54,7 +54,8 @@ class PreparationIntegrationTest {
         @Bean NotificationService notificationService(NotificationMapper n, WsPusher ws, TeamApplicationMapper a) { return new NotificationService(n, ws, a); }
         @Bean ResourceService resourceService(ResourceMapper r, TeamMemberMapper m, TeamMapper t, UserMapper u) { return new ResourceService(r, m, t, u); }
         @Bean TeamTaskService tasks(TeamTaskMapper t, TeamMapper team, UserMapper u, ResourceMapper r, CompetitionMapper c, ResourceService rs, NotificationService n, TeamMemberMapper m) { return new TeamTaskService(t, team, u, r, c, rs, n, m); }
-        @Bean TeamService teams(TeamMapper t, TeamMemberMapper m, TeamApplicationMapper a, TeamExitLogMapper e, CompetitionMapper c, UserMapper u, NotificationService n) { return new TeamService(t, m, a, e, c, u, n); }
+        @Bean TeamService teams(TeamMapper t, TeamMemberMapper m, TeamApplicationMapper a, TeamExitLogMapper e, CompetitionMapper c, UserMapper u, NotificationService n, TeamRecruitmentGuard g) { return new TeamService(t, m, a, e, c, u, n, g); }
+        @Bean TeamRecruitmentGuard recruitmentGuard(TeamMemberMapper m, TeamMapper t, CompetitionMapper c) { return new TeamRecruitmentGuard(m, t, c, java.time.Clock.systemDefaultZone()); }
     }
 
     @Autowired DataSource ds;
@@ -71,7 +72,9 @@ class PreparationIntegrationTest {
     @BeforeEach
     void setup() {
         jdbc = new JdbcTemplate(ds);
-        new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(ds);
+        new ResourceDatabasePopulator(new ClassPathResource("schema.sql")) {{
+            setSqlScriptEncoding("UTF-8");
+        }}.execute(ds);
         for (String table : List.of("team_task", "notification", "team_application", "team_member", "resource", "team", "competition", "users", "team_exit_log")) jdbc.execute("DELETE FROM " + table);
         jdbc.update("INSERT INTO users(id, username, password, nickname) VALUES (1, 'captain', 'test', '队长'), (2, 'member', 'test', '队员'), (3, 'other', 'test', '其他同学')");
         jdbc.update("INSERT INTO competition(id,name,start_time) VALUES (100,'测试竞赛',?)", LocalDateTime.now().plusDays(20));

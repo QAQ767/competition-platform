@@ -1,0 +1,595 @@
+{
+  "notice": "全部为虚构演示资料，不代表真实人物、奖项或官方赛程。日期为首次导入北京时间当天的相对天数，重复启动不顺延。",
+  "profiles": [
+    {
+      "username": "student1",
+      "nickname": "小林",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】主要做 Java 后端，能拆分接口和组织联调，界面设计需要队友支持。",
+      "experience": "【虚构演示经历】校园预约系统课程项目：负责 Spring Boot 登录鉴权、预约冲突校验与 MySQL 表结构；编写接口测试和部署说明。算法练习以图搜索为主，尚未独立完成数学建模论文。",
+      "roles": "后端开发、接口联调",
+      "hours": 12,
+      "status": "WANT_INVITE",
+      "skills": [
+        "算法",
+        "后端"
+      ]
+    },
+    {
+      "username": "student2",
+      "nickname": "小陈",
+      "college": "计算机学院",
+      "major": "数据科学与大数据技术",
+      "intro": "【虚构演示档案】熟悉 Python 数据处理，愿意承担数据清洗和基线模型，偏好明确分工。",
+      "experience": "【虚构演示经历】校园能耗分析课程项目：用 pandas 清理缺失值，比较线性回归与随机森林，用交叉验证检查误差，产出可复现 notebook；尚缺完整建模论文和前端交互经验。",
+      "roles": "数据分析、模型实验",
+      "hours": 10,
+      "status": "WANT_INVITE",
+      "skills": [
+        "数据分析",
+        "机器学习"
+      ]
+    },
+    {
+      "username": "student3",
+      "nickname": "小张",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】偏好 Vue 页面和交互实现，可独立联调接口，暂不承担复杂后端架构。",
+      "experience": "【虚构演示经历】社团活动管理课程项目：负责 Vue 3 活动列表、报名表单、移动端适配和 Element Plus 组件；根据 Figma 原型完成界面，修复表单校验与空状态问题。",
+      "roles": "前端开发、交互设计",
+      "hours": 14,
+      "status": "ACCEPT_INVITE",
+      "skills": [
+        "前端",
+        "UI设计"
+      ]
+    },
+    {
+      "username": "student4",
+      "nickname": "小李",
+      "college": "信息学院",
+      "major": "物联网工程",
+      "intro": "【虚构演示档案】擅长设备数据上报和 Java 接口，希望参与软硬件结合项目。",
+      "experience": "【虚构演示经历】实验室环境监测原型：使用 ESP32 采集温湿度，通过 MQTT 上报；编写 Spring Boot 数据入库接口与设备状态查询，调试离线重连。尚未完成量产硬件和复杂模型训练。",
+      "roles": "后端开发、设备接入",
+      "hours": 10,
+      "status": "ACCEPT_INVITE",
+      "skills": [
+        "后端",
+        "数据分析"
+      ]
+    },
+    {
+      "username": "student5",
+      "nickname": "小王",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】考研阶段，暂不接受新项目，可整理已有算法笔记。",
+      "experience": "【虚构演示经历】校内算法练习：实现并查集、最短路和动态规划题目，整理边界测试与复杂度分析；缺乏完整 Web 项目经历。当前每周仅能维护已有学习任务。",
+      "roles": "算法实现",
+      "hours": 2,
+      "status": "NOT_PARTICIPATE",
+      "skills": [
+        "算法"
+      ]
+    },
+    {
+      "username": "student6",
+      "nickname": "小刘",
+      "college": "外国语学院",
+      "major": "英语",
+      "intro": "【虚构演示档案】擅长材料组织和演讲表达，目前不接新队伍。",
+      "experience": "【虚构演示经历】跨学院课程展示：负责访谈提纲、英文资料摘要、汇报 PPT 和答辩彩排；能校对论证结构，但需要技术同学提供实验数据与实现细节，不独立承担算法开发。",
+      "roles": "文档写作、答辩演讲",
+      "hours": 3,
+      "status": "NOT_PARTICIPATE",
+      "skills": [
+        "文档写作"
+      ]
+    },
+    {
+      "username": "student7",
+      "nickname": "小赵",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】目前以浏览学习为主，参赛方向尚未确定。",
+      "experience": "【虚构演示经历】课程练习：制作 JavaScript 待办页面，学习排序和搜索算法；尚无多人项目经验，需要任务拆解和代码评审指导。",
+      "roles": "前端学习、测试辅助",
+      "hours": 0,
+      "status": "ONLY_VIEW",
+      "skills": [
+        "算法",
+        "前端"
+      ]
+    },
+    {
+      "username": "demo26_01",
+      "nickname": "林舟",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】希望负责后端和迭代安排，周二、周四晚及周末可协作。",
+      "experience": "【虚构演示经历】校园失物招领课程项目：负责 Spring Boot REST 接口、JWT 登录、MySQL 索引与接口测试，完成 Docker 部署说明；前端仅能修改简单表单。",
+      "roles": "后端开发、项目协调",
+      "hours": 12,
+      "status": "WANT_INVITE",
+      "skills": [
+        "后端",
+        "算法"
+      ]
+    },
+    {
+      "username": "demo26_02",
+      "nickname": "苏晴",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】主攻 Vue 3 交互，习惯先明确接口契约和验收标准。",
+      "experience": "【虚构演示经历】实验室预约系统：独立实现 Vue 3 + Pinia 页面、预约日历和权限菜单，使用 ECharts 展示使用率；处理加载失败、移动端适配和表单校验。尚不熟悉设备协议。",
+      "roles": "前端开发、数据可视化",
+      "hours": 14,
+      "status": "WANT_INVITE",
+      "skills": [
+        "前端",
+        "UI设计"
+      ]
+    },
+    {
+      "username": "demo26_03",
+      "nickname": "周宁",
+      "college": "设计学院",
+      "major": "数字媒体艺术",
+      "intro": "【虚构演示档案】擅长用户调研和原型，能做基础页面，不承担复杂工程开发。",
+      "experience": "【虚构演示经历】校园无障碍导航设计：访谈 6 位模拟用户，梳理任务流程，用 Figma 制作可点击原型与组件规范，完成可用性记录；Vue 仅完成过静态组件。",
+      "roles": "交互设计、用户研究",
+      "hours": 8,
+      "status": "ACCEPT_INVITE",
+      "skills": [
+        "UI设计",
+        "前端",
+        "文档写作"
+      ]
+    },
+    {
+      "username": "demo26_04",
+      "nickname": "陈溪",
+      "college": "统计学院",
+      "major": "应用统计学",
+      "intro": "【虚构演示档案】偏好可解释模型，能在周末集中推进实验。",
+      "experience": "【虚构演示经历】共享单车需求分析课程项目：负责 pandas 清洗、特征构造、回归与树模型对比，以时间切分验证避免泄漏；记录误差和局限，使用 matplotlib 出图，不擅长长篇论文排版。",
+      "roles": "数据分析、模型验证",
+      "hours": 12,
+      "status": "WANT_INVITE",
+      "skills": [
+        "数据分析",
+        "机器学习"
+      ]
+    },
+    {
+      "username": "demo26_05",
+      "nickname": "许言",
+      "college": "数学学院",
+      "major": "信息与计算科学",
+      "intro": "【虚构演示档案】擅长优化建模与算法，愿意讨论假设和模型边界。",
+      "experience": "【虚构演示经历】配送路径课程项目：构建容量约束模型，使用 Python 与 OR-Tools 求解，比较启发式方案并分析参数敏感性；能说明假设，但论文结构与图表表达需要合作。",
+      "roles": "数学建模、算法实现",
+      "hours": 10,
+      "status": "WANT_INVITE",
+      "skills": [
+        "算法",
+        "数据分析"
+      ]
+    },
+    {
+      "username": "demo26_06",
+      "nickname": "沈禾",
+      "college": "管理学院",
+      "major": "信息管理与信息系统",
+      "intro": "【虚构演示档案】擅长把实验记录整理成论文，愿意反复核对数据来源。",
+      "experience": "【虚构演示经历】校园公共空间研究课程项目：负责研究问题、问卷结构、参考文献管理、LaTeX 排版及图表说明；能读懂回归结果，尚不能独立调参或开发服务端。",
+      "roles": "论文撰写、结果解释",
+      "hours": 9,
+      "status": "WANT_INVITE",
+      "skills": [
+        "文档写作",
+        "数据分析"
+      ]
+    },
+    {
+      "username": "demo26_07",
+      "nickname": "唐越",
+      "college": "商学院",
+      "major": "工商管理",
+      "intro": "【虚构演示档案】擅长需求访谈和路演，希望参与有具体使用场景的产品。",
+      "experience": "【虚构演示经历】校园二手循环项目作业：负责用户分层、访谈记录、竞品表、成本假设、商业模式和 5 分钟路演；所有经营数字均为课堂假设，未实际运营，不承担编码。",
+      "roles": "产品策划、答辩演讲",
+      "hours": 8,
+      "status": "ACCEPT_INVITE",
+      "skills": [
+        "答辩演讲",
+        "文档写作"
+      ]
+    },
+    {
+      "username": "demo26_08",
+      "nickname": "顾川",
+      "college": "信息学院",
+      "major": "物联网工程",
+      "intro": "【虚构演示档案】偏好硬件接入和接口联调，熟悉实验台调试流程。",
+      "experience": "【虚构演示经历】宿舍环境监测原型：完成 ESP32 采集、MQTT 上报、异常数据过滤和 Spring Boot 设备 API；保留断网重连测试记录，缺少前端仪表盘和外观设计经验。",
+      "roles": "设备接入、后端开发",
+      "hours": 12,
+      "status": "WANT_INVITE",
+      "skills": [
+        "后端",
+        "数据分析"
+      ]
+    },
+    {
+      "username": "demo26_09",
+      "nickname": "陆遥",
+      "college": "计算机学院",
+      "major": "计算机科学与技术",
+      "intro": "【虚构演示档案】熟悉 C++ 算法，愿意维护测试样例和复杂度说明。",
+      "experience": "【虚构演示经历】课程组队解题：负责图论、动态规划和二分模块，整理溢出、空输入和极端数据样例；参加过校内模拟赛，没有公开获奖证明，不熟悉 UI 设计。",
+      "roles": "算法实现、测试",
+      "hours": 10,
+      "status": "ACCEPT_INVITE",
+      "skills": [
+        "算法"
+      ]
+    },
+    {
+      "username": "demo26_10",
+      "nickname": "叶青",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】希望负责质量保障，善于复现问题并编写清晰记录。",
+      "experience": "【虚构演示经历】课程商城项目：为登录、库存扣减和订单接口编写 JUnit 测试，整理 Postman 集合与回归清单；能够阅读 Java 代码，不负责复杂分布式架构。",
+      "roles": "测试验证、后端辅助",
+      "hours": 8,
+      "status": "WANT_INVITE",
+      "skills": [
+        "后端",
+        "文档写作"
+      ]
+    },
+    {
+      "username": "demo26_11",
+      "nickname": "江澄",
+      "college": "计算机学院",
+      "major": "人工智能",
+      "intro": "【虚构演示档案】偏好模型对比和实验复现，重视数据划分和资源限制。",
+      "experience": "【虚构演示经历】垃圾分类课程实验：用 PyTorch 微调轻量分类模型，完成训练验证集划分、混淆矩阵和错误样本分析；仅在课程数据上验证，未做真实部署，不熟悉前端。",
+      "roles": "机器学习、实验复现",
+      "hours": 12,
+      "status": "WANT_INVITE",
+      "skills": [
+        "机器学习",
+        "数据分析"
+      ]
+    },
+    {
+      "username": "demo26_12",
+      "nickname": "温岚",
+      "college": "计算机学院",
+      "major": "软件工程",
+      "intro": "【虚构演示档案】前端经验较多，但实习期间只能周末投入，需控制任务范围。",
+      "experience": "【虚构演示经历】课程大屏项目：实现 Vue 3、ECharts 多图联动、分页和大列表优化，独立联调多个 REST 接口；当前每周只有 3 小时，不适合承担紧急冲刺的唯一前端。",
+      "roles": "前端开发、可视化",
+      "hours": 3,
+      "status": "ACCEPT_INVITE",
+      "skills": [
+        "前端",
+        "UI设计"
+      ]
+    },
+    {
+      "username": "demo26_13",
+      "nickname": "程墨",
+      "college": "数学学院",
+      "major": "数学与应用数学",
+      "intro": "【虚构演示档案】愿意从简单任务做起，每周时间较充裕，需要代码评审指导。",
+      "experience": "【虚构演示经历】Python 课程作业：完成 CSV 清洗、描述统计和简单线性回归；能复现教程，但尚不能独立选择模型或处理复杂缺失机制，适合辅助实验与数据整理。",
+      "roles": "数据整理、辅助实验",
+      "hours": 16,
+      "status": "WANT_INVITE",
+      "skills": [
+        "数据分析",
+        "算法"
+      ]
+    },
+    {
+      "username": "demo26_14",
+      "nickname": "白露",
+      "college": "外国语学院",
+      "major": "翻译",
+      "intro": "【虚构演示档案】擅长双语表达和展示，技术内容需要开发成员核实。",
+      "experience": "【虚构演示经历】跨学科课程汇报：整理中英文资料摘要，制作演示脚本和 PPT，组织限时答辩练习；可解释产品流程，不独立证明算法正确性。",
+      "roles": "答辩演讲、文档写作",
+      "hours": 8,
+      "status": "WANT_INVITE",
+      "skills": [
+        "文档写作",
+        "答辩演讲"
+      ]
+    },
+    {
+      "username": "demo26_15",
+      "nickname": "季明",
+      "college": "计算机学院",
+      "major": "网络工程",
+      "intro": "【虚构演示档案】暂不参加新竞赛，保留档案供浏览。",
+      "experience": "【虚构演示经历】网络课程实验：在授权靶场完成请求分析与基础漏洞复现，记录修复建议并配置 Linux 服务；本学期毕业实习，无稳定参赛时间。",
+      "roles": "安全测试",
+      "hours": 0,
+      "status": "NOT_PARTICIPATE",
+      "skills": [
+        "后端",
+        "文档写作"
+      ]
+    },
+    {
+      "username": "demo26_16",
+      "nickname": "许夏",
+      "college": "设计学院",
+      "major": "视觉传达设计",
+      "intro": "【虚构演示档案】目前只浏览平台，希望先了解合作方式。",
+      "experience": "【虚构演示经历】课程作品：制作海报和界面配色规范，练习 Figma 原型；暂无多人开发经历，暂未承诺参赛时间。",
+      "roles": "视觉设计",
+      "hours": 0,
+      "status": "ONLY_VIEW",
+      "skills": [
+        "UI设计"
+      ]
+    }
+  ],
+  "competitions": [
+    {
+      "key": "web",
+      "name": "校园软件应用开发赛（2026秋季演示）",
+      "openDay": -7,
+      "closeDay": 35,
+      "eventDay": 49,
+      "description": "3—5 人团队制作校园服务 Web 应用，提交源代码、演示视频、接口说明和测试报告，重点考察可用性与团队协作。"
+    },
+    {
+      "key": "model",
+      "name": "数学建模实践挑战赛（2026秋季演示）",
+      "openDay": -5,
+      "closeDay": 28,
+      "eventDay": 35,
+      "description": "3 人组队解决校园配送或公共服务优化问题，提交建模假设、代码、可复现实验与完整论文。"
+    },
+    {
+      "key": "data",
+      "name": "校园数据分析与可视化赛（2026秋季演示）",
+      "openDay": -4,
+      "closeDay": 42,
+      "eventDay": 56,
+      "description": "3—4 人完成公开或模拟数据的清洗、可解释分析及交互展示，说明数据来源和模型局限。"
+    },
+    {
+      "key": "iot",
+      "name": "智慧校园物联网创意赛（2026秋季演示）",
+      "openDay": -3,
+      "closeDay": 49,
+      "eventDay": 70,
+      "description": "3—5 人完成传感采集、服务端和可视化原型，提交演示视频、设备协议与异常场景测试。"
+    },
+    {
+      "key": "pitch",
+      "name": "校园创新产品路演赛（2026秋季演示）",
+      "openDay": -2,
+      "closeDay": 56,
+      "eventDay": 77,
+      "description": "3—5 人围绕校园需求完成原型、需求验证、成本分析和路演，不要求真实创业经营数据。"
+    },
+    {
+      "key": "algo",
+      "name": "ACM 团队程序设计练习赛（2026秋季演示）",
+      "openDay": -8,
+      "closeDay": 5,
+      "eventDay": 12,
+      "description": "3 人协作解题，提交算法说明、复杂度分析与测试样例，用于校内练习展示。"
+    },
+    {
+      "key": "ml",
+      "name": "轻量机器学习应用赛（2026冬季演示）",
+      "openDay": 7,
+      "closeDay": 70,
+      "eventDay": 91,
+      "description": "3—4 人选择课程或开放数据集，比较基线模型与改进模型，提交可复现实验、误差分析及应用原型。"
+    },
+    {
+      "key": "design",
+      "name": "无障碍交互设计挑战赛（2026冬季演示）",
+      "openDay": 14,
+      "closeDay": 84,
+      "eventDay": 105,
+      "description": "3—4 人完成校园应用可用性调研、交互原型与前端演示，说明样本局限并记录改进过程。"
+    },
+    {
+      "key": "service",
+      "name": "校园志愿服务数字化赛（2026冬季演示）",
+      "openDay": -1,
+      "closeDay": 91,
+      "eventDay": 112,
+      "description": "3—5 人制作活动发布、报名和统计原型，提交权限设计、用户流程及演示文档。"
+    },
+    {
+      "key": "green",
+      "name": "绿色校园优化方案赛（2027春季演示）",
+      "openDay": 28,
+      "closeDay": 126,
+      "eventDay": 147,
+      "description": "3—4 人分析模拟能耗或交通数据，提出优化方案，提交模型、敏感性分析、成本假设与展示材料。"
+    }
+  ],
+  "teams": [
+    {
+      "competition": "web",
+      "title": "星桥校园服务队（演示）",
+      "members": [
+        "demo26_01",
+        "demo26_10"
+      ],
+      "capacity": 4,
+      "deadlineDay": 28,
+      "skills": "前端,UI设计",
+      "description": "目标完成可运行的失物招领与预约应用。现有后端与测试成员，接口设计已明确；缺能独立负责 Vue 页面及联调的前端，另需交互设计。希望每周 10 小时，优先能处理空状态与异常提示的同学。"
+    },
+    {
+      "competition": "web",
+      "title": "轻舟预约系统队（演示）",
+      "members": [
+        "demo26_02",
+        "demo26_03"
+      ],
+      "capacity": 4,
+      "deadlineDay": 30,
+      "skills": "后端,文档写作",
+      "description": "现有前端和交互原型能力，缺登录鉴权、预约冲突校验与数据库设计负责人；计划两周完成 API、随后联调。希望后端每周 8—12 小时，有测试意识。"
+    },
+    {
+      "competition": "model",
+      "title": "知衡建模队（演示）",
+      "members": [
+        "demo26_05",
+        "demo26_04"
+      ],
+      "capacity": 3,
+      "deadlineDay": 22,
+      "skills": "文档写作,数据分析",
+      "description": "研究校园配送优化，已有优化求解与数据实验两名成员，缺论文主笔。需要整理建模假设、敏感性分析与图表解释；每周 8 小时，最后一周协同校对，不再优先招同类算法成员。"
+    },
+    {
+      "competition": "model",
+      "title": "循迹建模队（演示）",
+      "members": [
+        "demo26_06"
+      ],
+      "capacity": 3,
+      "deadlineDay": 24,
+      "skills": "算法,数据分析",
+      "description": "队长负责论文结构与文献整理，缺能独立建立优化模型和清洗数据的同学。先完成可复现基线，再讨论改进；每周 8—10 小时，接受互补背景。"
+    },
+    {
+      "competition": "data",
+      "title": "澄明数据叙事队（演示）",
+      "members": [
+        "demo26_04",
+        "demo26_06"
+      ],
+      "capacity": 4,
+      "deadlineDay": 35,
+      "skills": "前端,UI设计",
+      "description": "已有数据清洗和结果解释能力，缺将分析结果做成 ECharts 交互页面的成员。要求区分相关与因果，展示模型误差；希望每周 8 小时，可分阶段交付。"
+    },
+    {
+      "competition": "data",
+      "title": "数启入门实践队（演示）",
+      "members": [
+        "demo26_13"
+      ],
+      "capacity": 3,
+      "deadlineDay": 36,
+      "skills": "数据分析,文档写作",
+      "description": "队长有基础 Python、时间充裕但经验有限。希望一名能带领数据清洗与基线验证的成员，加一名文档成员；从小规模模拟数据做起，每周一次代码评审。"
+    },
+    {
+      "competition": "iot",
+      "title": "云感环境监测队（演示）",
+      "members": [
+        "demo26_08"
+      ],
+      "capacity": 4,
+      "deadlineDay": 42,
+      "skills": "前端,UI设计,文档写作",
+      "description": "已具备 ESP32、MQTT 和后端接入能力，缺设备仪表盘、告警交互及演示材料。目标做可展示原型，每周 10 小时；需要理解离线与异常数据展示。"
+    },
+    {
+      "competition": "pitch",
+      "title": "向新产品路演队（演示）",
+      "members": [
+        "demo26_07",
+        "demo26_03"
+      ],
+      "capacity": 4,
+      "deadlineDay": 48,
+      "skills": "后端,前端",
+      "description": "已有需求分析、商业假设与可点击原型，缺能做最小可用 Web 演示的开发成员。控制范围为发布、查询和预约三个流程，每周 8 小时，需在路演前完成联调。"
+    },
+    {
+      "competition": "algo",
+      "title": "边界算法小队（演示）",
+      "members": [
+        "demo26_09"
+      ],
+      "capacity": 3,
+      "deadlineDay": 4,
+      "skills": "算法",
+      "description": "练习图论、动态规划与复杂度分析，队长负责图论和测试样例，缺动态规划与数论方向。比赛临近，希望本周能集中投入 8 小时并参加两次模拟协作。"
+    },
+    {
+      "competition": "ml",
+      "title": "微光模型应用队（演示）",
+      "members": [
+        "demo26_11"
+      ],
+      "capacity": 4,
+      "deadlineDay": 62,
+      "skills": "后端,前端,文档写作",
+      "description": "队长负责轻量分类模型与误差分析，缺模型服务接口、演示页面和实验文档成员。只使用课程或开放数据，先验证基线再做应用，不承诺实际业务准确率。"
+    },
+    {
+      "competition": "design",
+      "title": "无碍交互研究队（演示）",
+      "members": [
+        "demo26_03",
+        "demo26_14"
+      ],
+      "capacity": 4,
+      "deadlineDay": 75,
+      "skills": "前端,UI设计",
+      "description": "已有交互原型与展示材料能力，缺能实现键盘操作、表单提示及响应式布局的 Vue 开发者。每周 6—8 小时，按可用性任务逐项验收。"
+    },
+    {
+      "competition": "service",
+      "title": "同心志愿平台队（演示）",
+      "members": [
+        "demo26_10",
+        "demo26_07"
+      ],
+      "capacity": 5,
+      "deadlineDay": 80,
+      "skills": "前端,后端,UI设计",
+      "description": "已有测试与产品协调成员，计划完成志愿活动发布、报名审核、数据汇总三个模块。缺前后端主力与视觉设计，每周 8 小时，阶段成果需可演示。"
+    },
+    {
+      "competition": "green",
+      "title": "青循低碳方案队（演示）",
+      "members": [
+        "demo26_05",
+        "demo26_06"
+      ],
+      "capacity": 4,
+      "deadlineDay": 112,
+      "skills": "数据分析,答辩演讲",
+      "description": "已有优化建模和论文成员，缺能整理能耗数据、验证方案成本及承担路演的伙伴。时间跨度较长，可每周 5—8 小时持续推进，欢迎说明个人时间约束。"
+    },
+    {
+      "competition": "web",
+      "title": "合页协作展示队（演示）",
+      "members": [
+        "demo26_01",
+        "demo26_02",
+        "demo26_10"
+      ],
+      "capacity": 3,
+      "deadlineDay": 32,
+      "skills": "后端,前端,文档写作",
+      "description": "后端、前端与测试角色已经齐全，用于演示满员状态和成员分工。按接口、页面、回归测试三个阶段协作，当前不接收新成员。"
+    }
+  ]
+}

@@ -49,13 +49,17 @@ services:
       LLM_PROVIDER: ollama
       LLM_BASE_URL: http://host.docker.internal:11434
       LLM_MODEL: deepseek-r1:7b
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-180}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-none}
+      BRAVE_SEARCH_API_KEY: ${BRAVE_SEARCH_API_KEY:-}
+      DISCOVERY_ALLOW_FAKE_IP: "false"
       TZ: Asia/Shanghai
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - uploads-data:/app/uploads
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       mysql:
         condition: service_healthy

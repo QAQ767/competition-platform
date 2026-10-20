@@ -48,11 +48,13 @@ public class TeamService {
     private final CompetitionMapper competitionMapper;
     private final UserMapper userMapper;
     private final NotificationService notificationService;
+    private final TeamRecruitmentGuard recruitmentGuard;
 
     public TeamService(TeamMapper teamMapper, TeamMemberMapper teamMemberMapper,
                        TeamApplicationMapper teamApplicationMapper, TeamExitLogMapper teamExitLogMapper,
                        CompetitionMapper competitionMapper,
-                       UserMapper userMapper, NotificationService notificationService) {
+                       UserMapper userMapper, NotificationService notificationService,
+                       TeamRecruitmentGuard recruitmentGuard) {
         this.teamMapper = teamMapper;
         this.teamMemberMapper = teamMemberMapper;
         this.teamApplicationMapper = teamApplicationMapper;
@@ -60,6 +62,7 @@ public class TeamService {
         this.competitionMapper = competitionMapper;
         this.userMapper = userMapper;
         this.notificationService = notificationService;
+        this.recruitmentGuard = recruitmentGuard;
     }
 
     public PageVO<TeamVO> list(Long competitionId, String skill, String status, String keyword,
@@ -136,10 +139,11 @@ public class TeamService {
     @Transactional
     public TeamApplication apply(Long teamId, Long userId, ApplyReq req) {
         Team team = requireTeam(teamId);
-        checkRecruitmentOpen(team);
         if (team.getCaptainId().equals(userId)) {
             throw new BusinessException("你是队长，无需申请");
         }
+        recruitmentGuard.reconcile(team);
+        recruitmentGuard.requireCanJoin(team);
         if (team.getMemberCount() >= team.getMaxMembers()) {
             throw new BusinessException("队伍已满员");
         }
@@ -179,7 +183,7 @@ public class TeamService {
     public void approve(Long teamId, Long appId, Long operatorId) {
         Team team = requireTeam(teamId);
         checkCaptain(team, operatorId);
-        checkRecruitmentOpen(team);
+        recruitmentGuard.requireCanJoin(team);
         TeamApplication application = requireApplication(appId, teamId);
         if (!"待审批".equals(application.getStatus())) {
             throw new BusinessException("该申请已处理");
@@ -229,7 +233,7 @@ public class TeamService {
     public void invite(Long teamId, Long targetUserId, Long operatorId) {
         Team team = requireTeam(teamId);
         checkCaptain(team, operatorId);
-        checkRecruitmentOpen(team);
+        recruitmentGuard.requireCanJoin(team);
         User captain = userMapper.selectById(operatorId);
         User target = userMapper.selectById(targetUserId);
         if (target == null) {
@@ -329,7 +333,7 @@ public class TeamService {
             throw new BusinessException("该邀请已处理");
         }
         Team team = requireTeam(application.getTeamId());
-        checkRecruitmentOpen(team);
+        recruitmentGuard.requireCanJoin(team);
         application = teamApplicationMapper.selectForUpdate(appId);
         if (application == null || !"待审批".equals(application.getStatus())) {
             throw new BusinessException("该邀请已处理或已失效");
@@ -565,12 +569,6 @@ public class TeamService {
 
     private boolean deadlinePassed(Team team) {
         return team.getDeadline() != null && !team.getDeadline().isAfter(LocalDateTime.now());
-    }
-
-    private void checkRecruitmentOpen(Team team) {
-        if ("已结束".equals(team.getStatus()) || deadlinePassed(team)) {
-            throw new BusinessException("队伍已结束或已到组队截止时间，无法继续招募");
-        }
     }
 
     private Team requireTeam(Long teamId) {

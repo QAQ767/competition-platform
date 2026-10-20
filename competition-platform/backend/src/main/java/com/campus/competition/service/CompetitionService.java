@@ -79,12 +79,34 @@ public class CompetitionService {
         competition.setOrganizer(req.getOrganizer());
         competition.setLevel(req.getLevel());
         competition.setSignupStart(parse(req.getSignupStart()));
-        competition.setSignupEnd(parse(req.getSignupEnd()));
+        competition.setSignupEnd(parseEnd(req.getSignupEnd()));
         competition.setStartTime(parse(req.getStartTime()));
         competition.setDescription(req.getDescription());
+        competition.setTags(blankToNull(req.getTags()));
+        competition.setEligibilityText(blankToNull(req.getEligibilityText()));
+        competition.setCompetitionYear(req.getYear());
+        competition.setEdition(blankToNull(req.getEdition()));
+        competition.setTrack(blankToNull(req.getTrack()));
+        competition.setSourceUrl(blankToNull(req.getSourceUrl()));
+        competition.setSourceType(req.getSourceType() == null || req.getSourceType().isBlank()
+                ? "PLATFORM" : req.getSourceType());
         competition.setStatus(computeStatus(competition.getSignupStart(), competition.getSignupEnd()));
-        competitionMapper.insert(competition);
+        applyIdentity(competition);
+        try {
+            competitionMapper.insert(competition);
+        } catch (org.springframework.dao.DuplicateKeyException duplicate) {
+            throw new BusinessException(409,
+                    "已存在同一赛事（名称、主办方、年份、届次、赛道相同），请核对后修订原记录");
+        }
         cacheService.delete(CACHE_KEY);
+        return competition;
+    }
+
+    public Competition detail(Long id) {
+        Competition competition = competitionMapper.selectById(id);
+        if (competition == null) {
+            throw new BusinessException("竞赛不存在");
+        }
         return competition;
     }
 
@@ -94,6 +116,49 @@ public class CompetitionService {
         }
         competitionMapper.deleteById(id);
         cacheService.delete(CACHE_KEY);
+    }
+
+    /** 管理员明确更正既有赛事；AI 不会自动改写已发布赛事。 */
+    public synchronized Competition update(Long id, CompetitionReq req) {
+        Competition competition = competitionMapper.selectById(id);
+        if (competition == null) {
+            throw new BusinessException("竞赛不存在");
+        }
+        if (req.getName() == null || req.getName().isBlank()) {
+            throw new BusinessException(400, "竞赛名称不能为空");
+        }
+        competition.setName(req.getName().trim());
+        competition.setOrganizer(req.getOrganizer());
+        competition.setLevel(req.getLevel());
+        competition.setSignupStart(parse(req.getSignupStart()));
+        competition.setSignupEnd(parseEnd(req.getSignupEnd()));
+        competition.setStartTime(parse(req.getStartTime()));
+        competition.setDescription(req.getDescription());
+        competition.setTags(blankToNull(req.getTags()));
+        competition.setEligibilityText(blankToNull(req.getEligibilityText()));
+        competition.setCompetitionYear(req.getYear());
+        competition.setEdition(blankToNull(req.getEdition()));
+        competition.setTrack(blankToNull(req.getTrack()));
+        competition.setSourceUrl(blankToNull(req.getSourceUrl()));
+        competition.setSourceType(req.getSourceType() == null || req.getSourceType().isBlank()
+                ? competition.getSourceType() : req.getSourceType());
+        competition.setStatus(computeStatus(competition.getSignupStart(), competition.getSignupEnd()));
+        applyIdentity(competition);
+        try {
+            competitionMapper.updateById(competition);
+        } catch (org.springframework.dao.DuplicateKeyException duplicate) {
+            throw new BusinessException(409,
+                    "修改后与另一条赛事记录身份相同（名称、主办方、年份、届次、赛道），请先核对是否重复");
+        }
+        cacheService.delete(CACHE_KEY);
+        return competition;
+    }
+
+    /** 写入赛事实例身份键；身份不完整时留空，不建立可能误伤新一届的唯一键。 */
+    private void applyIdentity(Competition competition) {
+        competition.setIdentityKey(com.campus.competition.support.CompetitionIdentity.key(
+                competition.getName(), competition.getOrganizer(), competition.getCompetitionYear(),
+                competition.getEdition(), competition.getTrack()));
     }
 
     // 与列表缓存读写使用同一把锁，避免扫描清缓存后旧查询再次写回旧状态。
@@ -115,6 +180,19 @@ public class CompetitionService {
         } catch (Exception e) {
             return java.time.LocalDate.parse(text, FMT_DATE).atStartOfDay();
         }
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /** 只有日期的截止按北京时间当日 23:59:59，避免被当成 00:00 提前截止。 */
+    private LocalDateTime parseEnd(String text) {
+        LocalDateTime value = parse(text);
+        if (value != null && text != null && text.trim().length() <= 10) {
+            return value.toLocalDate().atTime(23, 59, 59);
+        }
+        return value;
     }
 
     private String computeStatus(LocalDateTime signupStart, LocalDateTime signupEnd) {

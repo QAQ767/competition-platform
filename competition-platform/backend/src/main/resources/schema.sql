@@ -41,7 +41,18 @@ CREATE TABLE IF NOT EXISTS competition (
     signup_end   DATETIME,
     start_time   DATETIME,
     description  VARCHAR(1000),
-    status       VARCHAR(20)
+    status       VARCHAR(20),
+    -- 管理员维护的结构化推荐字段，旧数据允许为空
+    tags              VARCHAR(300),
+    eligibility_text  VARCHAR(1000),
+    competition_year  INT,
+    edition           VARCHAR(50),
+    track             VARCHAR(100),
+    source_url        VARCHAR(800),
+    source_type       VARCHAR(30),
+    -- 赛事实例身份键；身份不完整时为 NULL，NULL 不参与唯一约束
+    identity_key      VARCHAR(80),
+    UNIQUE KEY uk_competition_identity (identity_key)
 );
 
 CREATE TABLE IF NOT EXISTS team (
@@ -230,4 +241,102 @@ CREATE TABLE IF NOT EXISTS training_favorite (
     site_id     BIGINT NOT NULL,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_user_site (user_id, site_id)
+);
+
+-- ========== 新增：赛事发现草稿（学生不可见，只有 PUBLISHED 才写入 competition） ==========
+CREATE TABLE IF NOT EXISTS competition_draft (
+    id                            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name                          VARCHAR(200),
+    organizer                     VARCHAR(200),
+    competition_year              INT,
+    edition                       VARCHAR(50),
+    track                         VARCHAR(100),
+    level                         VARCHAR(20),
+    description                   TEXT,
+    tags                          VARCHAR(300),
+    eligibility_text              VARCHAR(1000),
+    signup_start                  DATETIME,
+    signup_end                    DATETIME,
+    start_time                    DATETIME,
+    signup_end_precision          VARCHAR(10) DEFAULT 'UNKNOWN',
+    date_note                     VARCHAR(500),
+    date_interpretation_confirmed BOOLEAN DEFAULT FALSE,
+    source_url                    VARCHAR(800),
+    normalized_url                VARCHAR(800),
+    page_title                    VARCHAR(300),
+    source_org                    VARCHAR(200),
+    published_at                  DATETIME,
+    fetched_at                    DATETIME,
+    source_type                   VARCHAR(30),
+    extraction_mode               VARCHAR(20),
+    status                        VARCHAR(20) DEFAULT 'DRAFT',
+    version                       INT DEFAULT 0,
+    -- 通过 MARK_READY 时的版本号；发布必须与之一致，防止审核后内容被改
+    reviewed_version              INT,
+    missing_fields                TEXT,
+    conflicts                     TEXT,
+    warnings                      TEXT,
+    duplicate_candidates          TEXT,
+    duplicate_acknowledged        BOOLEAN DEFAULT FALSE,
+    duplicate_note                VARCHAR(500),
+    stale_reason                  VARCHAR(500),
+    review_note                   TEXT,
+    published_competition_id      BIGINT,
+    publish_key                   VARCHAR(80),
+    created_by                    BIGINT,
+    updated_by                    BIGINT,
+    created_at                    DATETIME,
+    updated_at                    DATETIME,
+    UNIQUE KEY uk_draft_publish_key (publish_key),
+    KEY idx_draft_status (status, updated_at)
+);
+
+CREATE TABLE IF NOT EXISTS competition_source (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    draft_id        BIGINT,
+    competition_id  BIGINT,
+    source_type     VARCHAR(30),
+    url             VARCHAR(800),
+    normalized_url  VARCHAR(800),
+    page_title      VARCHAR(300),
+    source_org      VARCHAR(200),
+    published_at    DATETIME,
+    fetched_at      DATETIME,
+    fetch_status    VARCHAR(20),
+    fetch_message   VARCHAR(500),
+    manual          BOOLEAN DEFAULT FALSE,
+    raw_text        MEDIUMTEXT,
+    evidence_json   TEXT,
+    created_at      DATETIME,
+    KEY idx_source_draft (draft_id),
+    KEY idx_source_competition (competition_id)
+);
+
+CREATE TABLE IF NOT EXISTS competition_discovery_job (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    admin_id     BIGINT,
+    mode         VARCHAR(20),
+    request_json TEXT,
+    status       VARCHAR(20) DEFAULT 'QUEUED',
+    message      VARCHAR(1000),
+    result_json  TEXT,
+    created_at   DATETIME,
+    started_at   DATETIME,
+    finished_at  DATETIME,
+    KEY idx_job_status (status, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS competition_draft_review (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    draft_id    BIGINT NOT NULL,
+    action      VARCHAR(30),
+    from_status VARCHAR(20),
+    to_status   VARCHAR(20),
+    operator_id BIGINT,
+    note        VARCHAR(1000),
+    -- 人工修正字段的前后值，供追溯
+    change_summary VARCHAR(1000),
+    version     INT,
+    created_at  DATETIME,
+    KEY idx_review_draft (draft_id)
 );

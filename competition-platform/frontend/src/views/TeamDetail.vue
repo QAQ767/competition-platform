@@ -559,6 +559,9 @@ async function load() {
   loading.value = true
   try {
     detail.value = await api.get(`/teams/${route.params.id}`)
+    if (route.query.apply === '1' && canApply.value) {
+      applyVisible.value = true
+    }
     if (isInTeam.value) {
       loadResources()
       loadDiscussions()

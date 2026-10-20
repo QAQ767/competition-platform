@@ -36,16 +36,30 @@ public class CompetitionController {
         return Result.success(competitionService.list(keyword, level, status));
     }
 
+    @GetMapping("/{id}")
+    public Result<Competition> detail(@PathVariable Long id) {
+        return Result.success(competitionService.detail(id));
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @OpLog("新增竞赛")
     @PostMapping
     public Result<Competition> create(@RequestBody CompetitionReq req) {
         return Result.success(competitionService.create(req));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @OpLog("删除竞赛")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         competitionService.delete(id);
         return Result.success();
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @OpLog("修改竞赛")
+    @org.springframework.web.bind.annotation.PutMapping("/{id}")
+    public Result<Competition> update(@PathVariable Long id, @RequestBody CompetitionReq req) {
+        return Result.success(competitionService.update(id, req));
     }
 }

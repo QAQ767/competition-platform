@@ -67,7 +67,9 @@ class ProfileIntegrationTest {
 
     @BeforeEach void setup() {
         jdbc = new JdbcTemplate(ds);
-        new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(ds);
+        new ResourceDatabasePopulator(new ClassPathResource("schema.sql")) {{
+            setSqlScriptEncoding("UTF-8");
+        }}.execute(ds);
         jdbc.execute("DELETE FROM user_follow");
         jdbc.execute("DELETE FROM users");
         jdbc.update("INSERT INTO users(id,username,password,nickname,email,avatar,college,major,intro) VALUES (1,'me','secret','我的昵称','old@example.com','/old.png','计算机学院','软件工程','个人简介'),(2,'peer','secret','队友','peer@example.com',null,null,null,null),(3,'fan','secret','粉丝',null,null,null,null,null)");

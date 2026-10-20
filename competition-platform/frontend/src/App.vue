@@ -226,7 +226,8 @@ import {
   Connection,
   Reading,
   Medal,
-  DataAnalysis
+  DataAnalysis,
+  Aim
 } from '@element-plus/icons-vue'
 import api from './api'
 import { useUserStore } from './stores/user'
@@ -238,6 +239,7 @@ const route = useRoute()
 const menuOpen = ref(false)
 const mainNav = [
   { path: '/', label: '发现竞赛', icon: Trophy },
+  { path: '/advice', label: '参赛推荐', icon: Aim },
   { path: '/teams', label: '组队广场', icon: Connection },
   { path: '/training', label: '训练中心', icon: Reading },
   { path: '/achievements', label: '荣誉成果', icon: Medal },

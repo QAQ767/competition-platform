@@ -62,7 +62,45 @@ llm:
   # 云端 API Key（deepseek 必填，通过环境变量注入，勿硬编码）
   api-key: "${LLM_API_KEY:}"
   # 单次调用超时（秒），超时自动降级规则模板
-  timeout-seconds: ${LLM_TIMEOUT_SECONDS:120}
+  timeout-seconds: ${LLM_TIMEOUT_SECONDS:180}
   # 训练助手允许更长的流式回答
   assistant-timeout-seconds: ${LLM_ASSISTANT_TIMEOUT_SECONDS:120}
   assistant-max-tokens: ${LLM_ASSISTANT_MAX_TOKENS:1200}
+
+# ===== 学生参赛推荐会话（Redis） =====
+advice:
+  # 会话 TTL（小时），按用户隔离
+  session-ttl-hours: ${ADVICE_SESSION_TTL_HOURS:24}
+  # 保留最近 20 条消息（10 轮）
+  max-messages: ${ADVICE_MAX_MESSAGES:20}
+  # 单条用户消息最大长度
+  max-message-length: ${ADVICE_MAX_MESSAGE_LENGTH:2000}
+  # 每用户每分钟最多消息/推荐次数
+  max-requests-per-minute: ${ADVICE_MAX_REQUESTS_PER_MINUTE:20}
+  default-window-days: ${ADVICE_DEFAULT_WINDOW_DAYS:90}
+  min-window-days: 7
+  max-window-days: 365
+
+# ===== 管理员近期赛事发现 =====
+discovery:
+  search:
+    # none / brave；Brave 需要 BRAVE_SEARCH_API_KEY，密钥只从环境变量注入
+    provider: ${SEARCH_PROVIDER:none}
+    api-key: "${BRAVE_SEARCH_API_KEY:}"
+    endpoint: ${SEARCH_ENDPOINT:https://api.search.brave.com/res/v1/web/search}
+    country: ${SEARCH_COUNTRY:CN}
+    lang: ${SEARCH_LANG:zh-hans}
+  fetch:
+    # 抓取超时、正文大小和重定向上限（SSRF 防护在 PublicHttpFetcher/UrlSafetyPolicy）
+    timeout-seconds: ${DISCOVERY_FETCH_TIMEOUT_SECONDS:15}
+    max-bytes: ${DISCOVERY_FETCH_MAX_BYTES:2097152}
+    max-redirects: ${DISCOVERY_FETCH_MAX_REDIRECTS:3}
+    user-agent: ${DISCOVERY_USER_AGENT:CampusCompetitionDiscovery/1.0 (+admin-triggered)}
+    # 本机代理可能把公网域名解析到 198.18.0.0/15（fake-IP）。默认 false；
+    # 仅本地联调可临时设为 true，生产必须保持 false。
+    allow-fake-ip: ${DISCOVERY_ALLOW_FAKE_IP:false}
+  job:
+    max-results: ${DISCOVERY_MAX_RESULTS:10}
+    concurrency: ${DISCOVERY_CONCURRENCY:2}
+    # 整个作业的总时限：到点后不再开始新的抓取/提取，单次 socket 超时不算总时限
+    timeout-seconds: ${DISCOVERY_JOB_TIMEOUT_SECONDS:300}

@@ -44,6 +44,7 @@ import java.util.Map;
  * 演示数据初始化：仅当 users 表为空时执行。
  */
 @Component
+@org.springframework.core.annotation.Order(0)
 public class DataSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
@@ -62,6 +63,7 @@ public class DataSeeder implements CommandLineRunner {
     private final TeamDiscussionMapper teamDiscussionMapper;
     private final TrainingSiteMapper trainingSiteMapper;
     private final TrainingCheckinMapper trainingCheckinMapper;
+    private final DemoScenarioSeeder demoScenarioSeeder;
 
     public DataSeeder(UserMapper userMapper, SkillTagMapper skillTagMapper, UserSkillMapper userSkillMapper,
                       CompetitionMapper competitionMapper, TeamMapper teamMapper, TeamMemberMapper teamMemberMapper,
@@ -69,7 +71,8 @@ public class DataSeeder implements CommandLineRunner {
                       AchievementMapper achievementMapper,
                       ChatMessageMapper chatMessageMapper, FeedbackMapper feedbackMapper,
                       TeamDiscussionMapper teamDiscussionMapper,
-                      TrainingSiteMapper trainingSiteMapper, TrainingCheckinMapper trainingCheckinMapper) {
+                      TrainingSiteMapper trainingSiteMapper, TrainingCheckinMapper trainingCheckinMapper,
+                      DemoScenarioSeeder demoScenarioSeeder) {
         this.userMapper = userMapper;
         this.skillTagMapper = skillTagMapper;
         this.userSkillMapper = userSkillMapper;
@@ -84,6 +87,7 @@ public class DataSeeder implements CommandLineRunner {
         this.teamDiscussionMapper = teamDiscussionMapper;
         this.trainingSiteMapper = trainingSiteMapper;
         this.trainingCheckinMapper = trainingCheckinMapper;
+        this.demoScenarioSeeder = demoScenarioSeeder;
     }
 
     @Override
@@ -97,6 +101,7 @@ public class DataSeeder implements CommandLineRunner {
             Map<String, Long> teams = seedTeamsAndMembers(users, competitions);
             seedApplicationsAndNotifications(users, teams);
             seedAchievements(users, competitions);
+            demoScenarioSeeder.populate(LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")));
             log.info("核心演示数据初始化完成");
         } else {
             log.info("核心演示数据已存在，跳过");

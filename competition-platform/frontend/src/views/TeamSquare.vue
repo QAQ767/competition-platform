@@ -61,6 +61,13 @@
         @click="openCreate"
         >＋ 创建组队</el-button
       >
+      <el-button
+        type="success"
+        plain
+        style="margin-left: 10px"
+        @click="router.push('/advice')"
+        >让推荐帮我找队</el-button
+      >
     </el-card>
 
     <el-row :gutter="16">

@@ -244,7 +244,8 @@ import {
   Monitor,
   DataAnalysis,
   Trophy,
-  Cpu
+  Cpu,
+  Aim
 } from '@element-plus/icons-vue'
 import api from '../api'
 import { LEVELS } from '../utils/constants'
@@ -267,6 +268,13 @@ const today = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'long'
 }).format(new Date())
 const shortcuts = [
+  {
+    path: '/advice',
+    title: '让推荐更懂你',
+    description: '按档案与需求匹配赛事和队伍',
+    icon: Aim,
+    color: 'purple'
+  },
   {
     path: '/teams',
     title: '找到合拍的队友',
@@ -515,7 +523,7 @@ onBeforeUnmount(() => clearInterval(competitionTimer))
 }
 .quick-links {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
   margin: 22px 0 34px;
 }
@@ -556,6 +564,10 @@ onBeforeUnmount(() => clearInterval(competitionTimer))
 .amber {
   background: #fff6e8;
   color: #c79747;
+}
+.purple {
+  background: #f2efff;
+  color: #7a67c9;
 }
 .quick-link strong {
   display: block;
@@ -759,6 +771,9 @@ onBeforeUnmount(() => clearInterval(competitionTimer))
   white-space: nowrap;
 }
 @media (max-width: 1200px) {
+  .quick-links {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .quick-link {
     padding: 16px 12px;
     gap: 9px;

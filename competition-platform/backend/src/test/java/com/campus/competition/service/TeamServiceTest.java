@@ -42,6 +42,7 @@ class TeamServiceTest {
     private UserMapper userMapper;
     private NotificationService notificationService;
     private TeamService teamService;
+    private TeamRecruitmentGuard recruitmentGuard;
 
     private Team team;
     private User captain;
@@ -63,7 +64,9 @@ class TeamServiceTest {
             return 1;
         }).when(teamApplicationMapper).insert(any(TeamApplication.class));
         teamService = new TeamService(teamMapper, teamMemberMapper, teamApplicationMapper,
-                teamExitLogMapper, competitionMapper, userMapper, notificationService);
+                teamExitLogMapper, competitionMapper, userMapper, notificationService,
+                new TeamRecruitmentGuard(teamMemberMapper, teamMapper, competitionMapper,
+                        java.time.Clock.systemDefaultZone()));
 
         team = new Team();
         team.setId(1L);

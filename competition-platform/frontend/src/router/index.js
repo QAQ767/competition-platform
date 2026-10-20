@@ -5,6 +5,12 @@ const routes = [
   { path: '/', component: () => import('../views/Home.vue') },
   { path: '/teams', component: () => import('../views/TeamSquare.vue') },
   { path: '/teams/:id', component: () => import('../views/TeamDetail.vue') },
+  { path: '/competitions/:id', component: () => import('../views/CompetitionDetail.vue') },
+  {
+    path: '/advice',
+    component: () => import('../views/Advice.vue'),
+    meta: { requiresAuth: true }
+  },
   { path: '/stats', component: () => import('../views/Stats.vue') },
   {
     path: '/achievements',
