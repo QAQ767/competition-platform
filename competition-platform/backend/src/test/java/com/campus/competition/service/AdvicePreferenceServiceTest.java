@@ -22,6 +22,12 @@ import static org.mockito.Mockito.when;
 
 /** 需求提取只认用户明确写出的内容；模型输出不合格时整轮回退规则。 */
 class AdvicePreferenceServiceTest {
+    @Test void extractionSchemaIsExactlyOneJsonObject() throws Exception {
+        var root = new ObjectMapper().reader().with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .readTree(AdvicePreferenceService.SCHEMA);
+        assertEquals("object", root.path("type").asText());
+        assertTrue(root.path("properties").has("questions"));
+    }
 
     private LlmService llmService;
     private LlmProperties properties;

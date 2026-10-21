@@ -100,7 +100,7 @@ public final class StudentRecommendationAi {
             int start = clean.indexOf('{');
             int end = clean.lastIndexOf('}');
             if (start < 0 || end <= start) return Application.fail("找不到 JSON 对象");
-            JsonNode root = new ObjectMapper().readTree(clean.substring(start, end + 1));
+            JsonNode root = new ObjectMapper().reader().with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(clean);
 
             String insight = text(root, "insight", 800);
             if (insight == null) return Application.fail("insight 为空或超长");
@@ -118,6 +118,9 @@ public final class StudentRecommendationAi {
             if (compRows == null) return Application.fail("竞赛 ID 缺失、重复或数量不一致");
             if (teamRows == null) return Application.fail("队伍 ID 缺失、重复或数量不一致");
 
+            // 全部字段验证成功后才允许修改任何候选，失败保持原始规则字段。
+            for (var entry : compRows.entrySet()) if (!validRow(entry.getValue(), false)) return Application.fail("竞赛条目字段不合法，id=" + entry.getKey());
+            for (var entry : teamRows.entrySet()) if (!validRow(entry.getValue(), true)) return Application.fail("队伍条目字段不合法，id=" + entry.getKey());
             for (CompetitionRecommendationVO vo : competitions) {
                 JsonNode row = compRows.get(vo.getId());
                 if (!validRow(row, false)) return Application.fail("竞赛条目字段不合法，id=" + vo.getId());
@@ -156,7 +159,7 @@ public final class StudentRecommendationAi {
         Set<Long> allowed = new HashSet<>(expected);
         Set<Long> seen = new HashSet<>();
         for (JsonNode row : node) {
-            if (!row.path("id").isIntegralNumber()) return "包含非整数 ID";
+            if (!row.path("id").isIntegralNumber() || !row.path("id").canConvertToLong()) return "包含非整数或越界 ID";
             long id = row.path("id").asLong();
             if (!allowed.contains(id)) return "包含未知 ID " + id;
             if (!seen.add(id)) return "重复 ID " + id;
@@ -172,7 +175,7 @@ public final class StudentRecommendationAi {
         Set<Long> allowed = new HashSet<>(expected);
         Map<Long, JsonNode> mapped = new HashMap<>();
         for (JsonNode row : node) {
-            if (!row.path("id").isIntegralNumber()) return null;
+            if (!row.path("id").isIntegralNumber() || !row.path("id").canConvertToLong()) return null;
             long id = row.path("id").asLong();
             if (!allowed.contains(id) || mapped.put(id, row) != null) return null;
         }
@@ -181,6 +184,7 @@ public final class StudentRecommendationAi {
 
     private static boolean validRow(JsonNode row, boolean team) {
         if (row == null || !row.path("score").isIntegralNumber()) return false;
+        if (!row.path("score").canConvertToInt()) return false;
         int score = row.path("score").asInt();
         if (score < 0 || score > 100) return false;
         if (text(row, "reason", 600) == null || text(row, "nextStep", 250) == null) return false;
@@ -189,7 +193,7 @@ public final class StudentRecommendationAi {
         for (JsonNode risk : risks) {
             if (!risk.isTextual() || risk.asText().isBlank() || risk.asText().length() > 300) return false;
         }
-        return !team || text(row, "suggestedRole", 10000) != null;
+        return !team || text(row, "suggestedRole", 80) != null;
     }
 
     /**

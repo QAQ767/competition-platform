@@ -40,9 +40,12 @@ public class PreferenceChange {
             case "excludedKeywords" -> "排除项";
             case "windowDays" -> "时间范围";
             case "teamOnly" -> "只看队伍";
+            case "outputTarget" -> "推荐目标";
+            case "competitionKeywords" -> "指定赛事";
             default -> field;
         };
         String joined = String.join("、", values);
+        if ("CLEAR".equals(op)) return label + " 已取消限制";
         if ("REMOVE".equals(op)) return label + " 移除：" + joined;
         if ("SET".equals(op)) return label + " 设为：" + joined;
         return label + " 增加：" + joined;

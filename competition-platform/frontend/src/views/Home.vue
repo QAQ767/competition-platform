@@ -231,6 +231,7 @@
       ><span>没有找到想参加的赛事？把它告诉我们，一起丰富校园竞赛地图。</span
       ><router-link to="/feedback">提交赛事反馈 →</router-link>
     </div>
+    <ChatAssistant scenario="advice" />
   </div>
 </template>
 <script setup>
@@ -248,6 +249,7 @@ import {
   Aim
 } from '@element-plus/icons-vue'
 import api from '../api'
+import ChatAssistant from '../components/ChatAssistant.vue'
 import { LEVELS } from '../utils/constants'
 import {
   COMPETITION_STATUS_TYPE,
@@ -268,13 +270,6 @@ const today = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'long'
 }).format(new Date())
 const shortcuts = [
-  {
-    path: '/advice',
-    title: '让推荐更懂你',
-    description: '按档案与需求匹配赛事和队伍',
-    icon: Aim,
-    color: 'purple'
-  },
   {
     path: '/teams',
     title: '找到合拍的队友',

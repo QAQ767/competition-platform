@@ -91,6 +91,7 @@ api.interceptors.response.use(
     if (body?.code === undefined) return body
     if (body.code === 200) return body.data
     const error = new Error(body.message || '请求失败')
+    error.code = body.code
     if (body.code === 401) return handleUnauthorized(res.config, error)
     ElMessage.error(
       body.message || (body.code === 403 ? '没有权限执行该操作' : '请求失败')
@@ -98,6 +99,7 @@ api.interceptors.response.use(
     return Promise.reject(error)
   },
   (error) => {
+    if (axios.isCancel(error)) return Promise.reject(error)
     if (error.response?.status === 401)
       return handleUnauthorized(error.config, error)
     ElMessage.error(

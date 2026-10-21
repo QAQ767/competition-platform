@@ -58,6 +58,20 @@ export function modeMeta(mode) {
   return ADVICE_MODE[mode] || ADVICE_MODE.RULE
 }
 
+export function recommendationFallbackMessage(result) {
+  const messages = {
+    NO_CANDIDATES: '当前没有符合条件的候选，本轮未调用 AI 排序。',
+    HTTP_401: 'AI 服务配置暂不可用，先为你展示规则匹配结果。',
+    HTTP_403: 'AI 服务配置暂不可用，先为你展示规则匹配结果。',
+    HTTP_429: 'AI 服务繁忙，先为你展示规则匹配结果，稍后可以重试。',
+    LLM_TIMEOUT: 'AI 分析超时，先为你展示符合条件的结果。',
+    EMPTY_RESPONSE: 'AI 未返回有效分析，先为你展示规则匹配结果。',
+    VALIDATION_FAILED: 'AI 分析未通过核验，先为你展示规则匹配结果。',
+    LLM_UNAVAILABLE: '暂时无法连接 AI，先为你展示规则匹配结果。'
+  }
+  return messages[result?.failureCategory] || 'AI 暂时未能完成分析，先为你展示符合条件的结果。'
+}
+
 export function confidenceMeta(confidence) {
   return ADVICE_CONFIDENCE[confidence] || ADVICE_CONFIDENCE.EXPLORE
 }
@@ -175,6 +189,7 @@ export function adviceEmptyReason(result) {
 export const DEFAULT_WINDOW_DAYS = 90
 
 export function effectiveWindowDays(preferences, fallback = DEFAULT_WINDOW_DAYS) {
+  if (preferences?.windowUnrestricted) return null
   const value = preferences?.windowDays
   const numeric = Number(value)
   return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
@@ -182,5 +197,6 @@ export function effectiveWindowDays(preferences, fallback = DEFAULT_WINDOW_DAYS)
 
 /** 勾选“只看队伍”后应直接展示队伍页签，避免停在空的竞赛列表。 */
 export function preferredResultTab(preferences) {
+  if (preferences?.outputTarget) return preferences.outputTarget === 'TEAMS' ? 'teams' : 'competitions'
   return preferences?.teamOnly ? 'teams' : 'competitions'
 }

@@ -88,6 +88,24 @@ class StudentRecommendationAiTest {
         assertTrue(StudentRecommendationAi.apply(json, new ArrayList<>(), new ArrayList<>()).ok);
     }
 
+    @Test
+    void invalidLaterTeamDoesNotMutateEarlierCompetition() {
+        var comps = competitions(14L); comps.get(0).setReason("规则理由");
+        var ts = teams(7L); ts.get(0).setReason("规则队伍");
+        String output = "{\"insight\":\"x\",\"competitions\":[{\"id\":14,\"score\":99,\"reason\":\"模型理由\",\"risks\":[],\"nextStep\":\"x\"}],\"teams\":[{\"id\":7,\"score\":101,\"reason\":\"错误\",\"risks\":[],\"nextStep\":\"x\",\"suggestedRole\":\"后端\"}]}";
+        assertFalse(StudentRecommendationAi.apply(output, comps, ts).ok);
+        assertEquals(1, comps.get(0).getMatchScore()); assertEquals("规则理由", comps.get(0).getReason());
+        assertEquals("规则队伍", ts.get(0).getReason());
+    }
+
+    @Test
+    void trailingGarbageAndOverflowScoreRejected() {
+        String output = "{\"insight\":\"x\",\"competitions\":[],\"teams\":[]}";
+        assertFalse(StudentRecommendationAi.apply(output + "garbage", new ArrayList<>(), new ArrayList<>()).ok);
+        String overflow = "{\"insight\":\"x\",\"competitions\":[{\"id\":14,\"score\":4294967297,\"reason\":\"x\",\"risks\":[],\"nextStep\":\"x\"}],\"teams\":[]}";
+        assertFalse(StudentRecommendationAi.apply(overflow, competitions(14L), teams()).ok);
+    }
+
     private List<CompetitionRecommendationVO> competitions(Long... ids) {
         List<CompetitionRecommendationVO> list = new ArrayList<>();
         for (Long id : ids) {

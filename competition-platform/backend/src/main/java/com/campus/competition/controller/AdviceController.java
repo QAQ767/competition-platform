@@ -48,6 +48,13 @@ public class AdviceController {
                 req == null ? null : req.getMessage()));
     }
 
+    @PostMapping("/sessions/{id}/chat")
+    public Result<AdviceMessageResultVO> chat(@PathVariable String id, @RequestBody AdviceMessageReq req) {
+        return Result.success(sessionService.chat(UserContext.getUserId(), id, req.getVersion(), req.getMessage()));
+    }
+    @PostMapping("/sessions/{id}/cancel")
+    public Result<Void> cancel(@PathVariable String id) { sessionService.cancel(UserContext.getUserId(), id); return Result.success(); }
+
     @PutMapping("/sessions/{id}/preferences")
     public Result<AdviceSessionVO> preferences(@PathVariable String id,
                                                @RequestBody AdvicePreferencesReq req) {

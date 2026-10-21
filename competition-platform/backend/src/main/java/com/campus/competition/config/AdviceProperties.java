@@ -21,6 +21,9 @@ public class AdviceProperties {
     /** 允许的时间窗口范围。 */
     private int minWindowDays = 7;
     private int maxWindowDays = 365;
+    private long turnTimeoutSeconds = 90;
+    public long getTurnTimeoutSeconds() { return turnTimeoutSeconds; }
+    public void setTurnTimeoutSeconds(long seconds) { turnTimeoutSeconds = Math.max(1, Math.min(90, seconds)); }
 
     public long getSessionTtlHours() {
         return sessionTtlHours;

@@ -34,6 +34,7 @@ class AdviceSessionServiceTest {
     private InMemoryStore store;
     private AdviceSessionService service;
     private UserMapper userMapper;
+    private StudentRecommendationService recommendations;
 
     @BeforeEach
     void setUp() {
@@ -53,9 +54,71 @@ class AdviceSessionServiceTest {
         AdviceProperties properties = new AdviceProperties();
         AdvicePreferenceService preferenceService = new AdvicePreferenceService(
                 mock(LlmService.class), new com.campus.competition.config.LlmProperties(), new ObjectMapper().findAndRegisterModules());
-        service = new AdviceSessionService(store, preferenceService, mock(StudentRecommendationService.class),
+        recommendations = mock(StudentRecommendationService.class);
+        when(recommendations.recommend(any(), any(), org.mockito.ArgumentMatchers.anyInt())).thenAnswer(inv -> {
+            var result = new com.campus.competition.vo.StudentRecommendationVO(); result.setMode("RULE"); result.setFallbackReason("模拟规则");
+            var team = new com.campus.competition.vo.TeamRecommendationVO(); team.setId(14L); team.setTitle("真实队伍"); team.setReason("每周时间匹配"); result.getTeams().add(team); return result;
+        });
+        service = new AdviceSessionService(store, preferenceService, recommendations,
                 properties, new ObjectMapper().findAndRegisterModules(), userMapper, mock(UserSkillMapper.class),
                 mock(SkillTagMapper.class), mock(AchievementMapper.class));
+    }
+
+    @Test void chatReturnsTrustedCardsInOneVersionAndPersistsThem() {
+        var session = service.create(1L);
+        var result = service.chat(1L, session.getId(), 0, "我会 Java，每周 5 小时，推荐竞赛和队伍");
+        assertEquals(1, result.getVersion()); assertEquals(5, result.getPreferences().getWeeklyHours());
+        assertEquals(14L, result.getRecommendation().getTeams().get(0).getId());
+        assertEquals(14L, service.get(1L, session.getId()).getMessages().get(1).getRecommendation().getTeams().get(0).getId());
+        org.mockito.Mockito.verify(userMapper, org.mockito.Mockito.never()).updateById(any());
+    }
+    @Test void greetingsAndExplanationsNeverCallRecommendation() {
+        var session = service.create(1L);
+        service.chat(1L, session.getId(), 0, "你好"); service.chat(1L, session.getId(), 1, "为什么推荐这个");
+        org.mockito.Mockito.verifyNoInteractions(recommendations);
+    }
+    @Test void ordinaryConversationDoesNotGenerateCards() {
+        var session = service.create(1L);
+        var result = service.chat(1L, session.getId(), 0, "你可以做些什么");
+        org.junit.jupiter.api.Assertions.assertNull(result.getRecommendation());
+        org.mockito.Mockito.verifyNoInteractions(recommendations);
+    }
+    @Test void unresolvedCompetitionAsksInsteadOfClaimingUnrelatedRecommendations() {
+        var session = service.create(1L);
+        var result = service.chat(1L, session.getId(), 0, "我想参加中国大学生计算机设计大赛，推荐相关队伍");
+        org.junit.jupiter.api.Assertions.assertNull(result.getRecommendation());
+        assertEquals("UNRESOLVED",result.getPreferences().getCompetitionIntentStatus());
+        assertTrue(result.getReply().contains("平台暂未找到")); assertTrue(!result.getQuestions().isEmpty());
+        org.mockito.Mockito.verify(recommendations,org.mockito.Mockito.never()).recommend(any(),any(),org.mockito.ArgumentMatchers.anyInt());
+    }
+    @Test void chatRequiresVersionAndRejectsOtherOwner() {
+        var session = service.create(1L);
+        assertEquals(409, assertThrows(BusinessException.class, () -> service.chat(1L, session.getId(), null, "推荐")).getCode());
+        assertEquals(403, assertThrows(BusinessException.class, () -> service.chat(2L, session.getId(), 0, "推荐")).getCode());
+    }
+    @Test void explicitIdentityAndContinuousEditsRemainInSession() {
+        var session = service.create(1L); service.chat(1L, session.getId(), 0, "我想参加蓝桥杯，只推荐队伍");
+        service.chat(1L, session.getId(), 1, "不要建模"); service.chat(1L, session.getId(), 2, "只有 3 小时"); service.chat(1L, session.getId(), 3, "最近一个月");
+        var p = service.get(1L, session.getId()).getPreferences();
+        assertEquals(java.util.List.of("蓝桥杯"), p.getCompetitionKeywords()); assertEquals(true, p.getTeamOnly());
+        assertEquals(3, p.getWeeklyHours()); assertEquals(30, p.getWindowDays()); assertTrue(p.getExcludedKeywords().contains("建模"));
+    }
+    @Test void changingResultsExcludesLastTrustedIds() {
+        var session = service.create(1L); service.chat(1L, session.getId(), 0, "推荐"); service.chat(1L, session.getId(), 1, "换一些");
+        assertTrue(service.get(1L, session.getId()).getPreferences().getExcludedTeamIds().contains(14L));
+    }
+    @Test void deleteDuringGenerationCannotResurrectSession() {
+        var session = service.create(1L);
+        when(recommendations.recommend(any(), any(), org.mockito.ArgumentMatchers.anyInt())).thenAnswer(inv -> {
+            service.delete(1L, session.getId()); return new com.campus.competition.vo.StudentRecommendationVO();
+        });
+        assertThrows(BusinessException.class, () -> service.chat(1L, session.getId(), 0, "推荐"));
+        assertEquals(404, assertThrows(BusinessException.class, () -> service.get(1L, session.getId())).getCode());
+    }
+    @Test void cancelInvalidatesPendingSnapshotEvenBeforeGenerationStarts() {
+        var session = service.create(1L); service.cancel(1L, session.getId());
+        assertEquals(409, assertThrows(BusinessException.class, () -> service.chat(1L, session.getId(), 0, "推荐")).getCode());
+        assertEquals(1, service.get(1L, session.getId()).getVersion());
     }
 
     @Test

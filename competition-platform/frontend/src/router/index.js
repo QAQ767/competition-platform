@@ -5,39 +5,41 @@ const routes = [
   { path: '/', component: () => import('../views/Home.vue') },
   { path: '/teams', component: () => import('../views/TeamSquare.vue') },
   { path: '/teams/:id', component: () => import('../views/TeamDetail.vue') },
-  { path: '/competitions/:id', component: () => import('../views/CompetitionDetail.vue') },
+  {
+    path: '/competitions/:id',
+    component: () => import('../views/CompetitionDetail.vue'),
+  },
   {
     path: '/advice',
-    component: () => import('../views/Advice.vue'),
-    meta: { requiresAuth: true }
+    redirect: { path: '/', query: { assistant: 'advice' } },
   },
   { path: '/stats', component: () => import('../views/Stats.vue') },
   {
     path: '/achievements',
-    component: () => import('../views/Achievements.vue')
+    component: () => import('../views/Achievements.vue'),
   },
   { path: '/training', component: () => import('../views/Training.vue') },
   { path: '/users/:id', component: () => import('../views/UserHome.vue') },
   {
     path: '/chat',
     component: () => import('../views/Chat.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/feedback',
     component: () => import('../views/Feedback.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/me',
     component: () => import('../views/Me.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
     path: '/admin',
     component: () => import('../views/Admin.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  }
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ]
 
 const router = createRouter({
@@ -45,7 +47,7 @@ const router = createRouter({
   routes,
   scrollBehavior(to, from, savedPosition) {
     return savedPosition || { top: 0 }
-  }
+  },
 })
 
 router.beforeEach((to) => {

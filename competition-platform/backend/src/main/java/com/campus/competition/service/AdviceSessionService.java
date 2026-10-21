@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class AdviceSessionService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdviceSessionService.class);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final long RATE_WINDOW_MILLIS = 60_000L;
 
@@ -133,6 +134,85 @@ public class AdviceSessionService {
         return vo;
     }
 
+    private final Map<String, LlmCallBudget> active = new ConcurrentHashMap<>();
+
+    public void cancel(Long userId, String sessionId) {
+        AdviceSession session = requireSession(userId, sessionId);
+        int base = session.getVersion();
+        session.setVersion(base + 1);
+        saveIfVersion(session, base);
+        LlmCallBudget budget = active.get(sessionId);
+        if (budget != null) budget.cancel();
+    }
+
+    public AdviceMessageResultVO chat(Long userId, String sessionId, Integer version, String message) {
+        AdviceSession session = requireSession(userId, sessionId);
+        if (version == null || !version.equals(session.getVersion())) throw new BusinessException(409, "会话已更新，请刷新后重试");
+        if (message == null || message.isBlank() || message.length() > properties.getMaxMessageLength()) throw new BusinessException(400, "请输入 1 到 2000 字的需求");
+        checkRate(userId, System.currentTimeMillis());
+        try (LlmCallBudget budget = new LlmCallBudget(properties.getTurnTimeoutSeconds())) {
+            if (active.putIfAbsent(sessionId, budget) != null) throw new BusinessException(409, "该会话正在生成，请先停止或等待");
+            try {
+                String text = message.trim();
+                StudentRecommendationVO previous = session.getMessages().stream().filter(m -> m.getRecommendation() != null)
+                        .reduce((a,b) -> b).map(AdviceMessage::getRecommendation).orElse(null);
+                String reply; String mode = "RULE"; String fallback = null; StudentRecommendationVO recommendation = null;
+                List<String> questions = new ArrayList<>();
+                boolean greeting = text.matches("(?i)(?:你好|您好|嗨|谢谢|谢谢你|好的|好|hi|hello|你是谁|在吗)[！!。.?？ ]*");
+                boolean explain = text.matches("(?s).*(?:(?:为什么|为何|解释).*(?:推荐|这[个条支场]|队伍|比赛)|推荐理由).*");
+                boolean relevant = text.matches("(?s).*(?:推荐|比赛|竞赛|赛事|参加|队伍|团队|换一些|换一批|换几个|其他推荐).*" )
+                        || !new com.campus.competition.advice.RulePreferenceExtractor().extract(text).changes.isEmpty();
+                if (greeting) reply = "你好！我可以帮你找比赛、找队伍。告诉我技能、每周时间或想参加的赛事即可。";
+                else if (explain) reply = previous == null ? "目前还没有推荐结果。可以先说‘按我的情况推荐比赛和队伍’。" : explanation(previous, text);
+                else if (!relevant) reply = "我可以结合档案帮你找比赛、找队伍。你希望先看哪一类？也可以直接告诉我想参加的赛事。";
+                else {
+                    ParticipantProfile profile = profile(userId);
+                    long stageStart = System.nanoTime();
+                    AdvicePreferenceService.Applied applied = preferenceService.applyChat(text, session.getPreferences(), profile, recommendationService.competitionCatalog());
+                    log.info("advice phase=understand elapsedMs={} mode={}", (System.nanoTime()-stageStart)/1_000_000, applied.mode);
+                    budget.check(); session.setPreferences(applied.preferences);
+                    if (text.matches("(?s).*(?:换一些|换一批|换几个|其他推荐).*" ) && previous != null) {
+                        for (var c : previous.getCompetitions()) if (!session.getPreferences().getExcludedCompetitionIds().contains(c.getId())) session.getPreferences().getExcludedCompetitionIds().add(c.getId());
+                        for (var t : previous.getTeams()) if (!session.getPreferences().getExcludedTeamIds().contains(t.getId())) session.getPreferences().getExcludedTeamIds().add(t.getId());
+                    }
+                    questions = applied.questions;
+                    if (applied.clarificationRequired) {
+                        reply = String.join("\n", applied.questions);
+                        mode = applied.mode;
+                        fallback = applied.fallbackReason;
+                    } else {
+                        stageStart = System.nanoTime();
+                        recommendation = recommendationService.recommend(profile, session.getPreferences(), resolveWindow(null, session.getPreferences().getWindowDays()));
+                        log.info("advice phase=recommend elapsedMs={} retry={} failure={}", (System.nanoTime()-stageStart)/1_000_000, recommendation.getRetryCount(), recommendation.getFailureCategory());
+                        budget.check(); mode = recommendation.getMode(); fallback = recommendation.getFallbackReason();
+                        int count = recommendation.getCompetitions().size() + recommendation.getTeams().size();
+                        reply = count == 0 ? "当前没有符合这些条件的更多结果。我保留了你的明确条件；可以尝试放宽时间范围，或稍后再查看招募。" :
+                                "已结合档案与本轮需求筛选，找到 " + recommendation.getCompetitions().size() + " 场竞赛、" + recommendation.getTeams().size() + " 支队伍。请核对卡片中的时间与资格。";
+                        if (session.getPreferences().getWeeklyHours() != null) reply += " 每周按 " + session.getPreferences().getWeeklyHours() + " 小时考虑。";
+                        if (!session.getPreferences().getExcludedKeywords().isEmpty()) reply += " 已排除：" + String.join("、", session.getPreferences().getExcludedKeywords()) + "。";
+                        if (session.getPreferences().isWeeklyHoursUnrestricted()) reply += " 已取消本轮每周时间限制。";
+                        if (session.getPreferences().isWindowUnrestricted()) reply += " 已取消本轮日期范围限制，仍核查报名截止。";
+                    }
+                }
+                budget.check();
+                AdviceMessage answer = new AdviceMessage("assistant", reply, FMT.format(LocalDateTime.now())); answer.setRecommendation(recommendation); answer.setQuestions(questions);
+                session.getMessages().add(new AdviceMessage("user", text, FMT.format(LocalDateTime.now()))); session.getMessages().add(answer); trim(session);
+                session.setVersion(version + 1); session.setUpdatedAt(LocalDateTime.now()); saveIfVersion(session, version);
+                AdviceMessageResultVO result = new AdviceMessageResultVO(); result.setSessionId(sessionId); result.setVersion(session.getVersion()); result.setReply(reply);
+                result.setPreferences(session.getPreferences()); result.setRecommendation(recommendation); result.setMode(mode); result.setFallbackReason(fallback); result.setAt(answer.getAt()); result.setQuestions(questions); return result;
+            } finally { active.remove(sessionId, budget); }
+        }
+    }
+
+    private String explanation(StudentRecommendationVO previous, String text) {
+        List<String> reasons = new ArrayList<>();
+        for (var t : previous.getTeams()) if (text.contains(t.getTitle())) reasons.add(t.getTitle() + "：" + t.getReason());
+        for (var c : previous.getCompetitions()) if (text.contains(c.getName())) reasons.add(c.getName() + "：" + c.getReason());
+        if (reasons.isEmpty() && !previous.getTeams().isEmpty()) { var t = previous.getTeams().get(0); reasons.add(t.getTitle() + "：" + t.getReason()); }
+        if (reasons.isEmpty() && !previous.getCompetitions().isEmpty()) { var c = previous.getCompetitions().get(0); reasons.add(c.getName() + "：" + c.getReason()); }
+        return reasons.isEmpty() ? "上一轮没有符合条件的结果，可以调整时间或赛事范围。" : String.join("\n", reasons) + "\n这是上次结果的解释，当前是否可申请请以详情页实时状态为准。";
+    }
+
     public AdviceSessionVO updatePreferences(Long userId, String sessionId, Integer version,
                                              AdvicePreferences preferences) {
         AdviceSession session = requireSession(userId, sessionId);
@@ -182,6 +262,7 @@ public class AdviceSessionService {
 
     public void delete(Long userId, String sessionId) {
         requireSession(userId, sessionId);
+        cancel(userId, sessionId);
         store.delete(sessionId);
     }
 
@@ -268,6 +349,7 @@ public class AdviceSessionService {
     }
 
     private void validate(AdvicePreferences prefs) {
+        if (!java.util.Set.of("COMPETITIONS", "TEAMS", "BOTH").contains(prefs.getOutputTarget())) throw new BusinessException(400, "推荐目标不正确");
         if (prefs.getWeeklyHours() != null && (prefs.getWeeklyHours() < 1 || prefs.getWeeklyHours() > 80)) {
             throw new BusinessException(400, "每周时间需在 1 到 80 小时之间");
         }

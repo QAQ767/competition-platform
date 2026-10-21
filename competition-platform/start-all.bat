@@ -33,20 +33,10 @@ exit /b 1
 echo    [OK] Docker engine ready
 echo.
 
-REM ====== Step 2: check Ollama (local LLM) ======
-echo [2/3] Checking Ollama local LLM (AI recommendation)...
-powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
-if not errorlevel 1 goto ollamaok
-echo    Ollama is not running, trying to start...
-if exist "%LOCALAPPDATA%\Programs\Ollama\ollama app.exe" (
-    start "" "%LOCALAPPDATA%\Programs\Ollama\ollama app.exe"
-    timeout /t 6 /nobreak >nul
-    goto ollamaok
-)
-echo    [WARNING] Ollama not found. AI recommendation will use rule engine.
-:ollamaok
-echo    [OK] LLM ready
-echo.
+REM Cloud provider does not require an Ollama process.
+echo [2/3] Provider is configured in server-side .env.
+echo For the optional Ollama provider, start Ollama manually first.
+echo Verify the actual provider via backend logs and a real request.
 
 REM ====== Step 3: start containers ======
 echo [3/3] Starting MySQL + Redis + Backend + Frontend containers...

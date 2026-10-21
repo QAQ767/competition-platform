@@ -54,21 +54,22 @@ llm:
   # 是否启用；false 时仅使用规则引擎
   enabled: ${LLM_ENABLED:true}
   # ollama（本地模型，离线可用）/ deepseek（云端 API，需 LLM_API_KEY）/ none
-  provider: ${LLM_PROVIDER:ollama}
+  provider: ${LLM_PROVIDER:deepseek}
   # Ollama 默认 http://localhost:11434；Docker 部署用 http://host.docker.internal:11434
-  base-url: ${LLM_BASE_URL:http://localhost:11434}
+  base-url: ${LLM_BASE_URL:https://api.deepseek.com}
   # ollama 模型名（deepseek-r1:7b / qwen2.5:7b 等）；deepseek provider 时用 deepseek-chat
-  model: ${LLM_MODEL:deepseek-r1:7b}
+  model: ${LLM_MODEL:deepseek-flash}
   # 云端 API Key（deepseek 必填，通过环境变量注入，勿硬编码）
   api-key: "${LLM_API_KEY:}"
   # 单次调用超时（秒），超时自动降级规则模板
-  timeout-seconds: ${LLM_TIMEOUT_SECONDS:180}
+  timeout-seconds: ${LLM_TIMEOUT_SECONDS:45}
   # 训练助手允许更长的流式回答
   assistant-timeout-seconds: ${LLM_ASSISTANT_TIMEOUT_SECONDS:120}
   assistant-max-tokens: ${LLM_ASSISTANT_MAX_TOKENS:1200}
 
 # ===== 学生参赛推荐会话（Redis） =====
 advice:
+  turn-timeout-seconds: ${ADVICE_TURN_TIMEOUT_SECONDS:90}
   # 会话 TTL（小时），按用户隔离
   session-ttl-hours: ${ADVICE_SESSION_TTL_HOURS:24}
   # 保留最近 20 条消息（10 轮）

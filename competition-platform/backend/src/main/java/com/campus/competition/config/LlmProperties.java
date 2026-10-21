@@ -109,7 +109,8 @@ public class LlmProperties {
             return baseUrl != null && !baseUrl.isBlank() && model != null && !model.isBlank();
         }
         if ("deepseek".equalsIgnoreCase(provider)) {
-            return apiKey != null && !apiKey.isBlank();
+            return apiKey != null && !apiKey.isBlank()
+                    && baseUrl != null && !baseUrl.isBlank() && model != null && !model.isBlank();
         }
         return false;
     }

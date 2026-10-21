@@ -9,6 +9,7 @@ import {
   formatScore,
   matchScoreHint,
   modeMeta,
+  recommendationFallbackMessage,
   preferenceRows,
   sourceTypeLabel,
   weeklyHoursLabel
@@ -20,6 +21,13 @@ test('推荐模式与置信度使用明确中文标签', () => {
   assert.equal(modeMeta('UNKNOWN').label, '规则匹配')
   assert.equal(confidenceMeta('EXPLORE').label, '探索结果')
   assert.equal(confidenceMeta(undefined).label, '探索结果')
+})
+
+test('规则回退区分空候选、超时、空响应和核验失败', () => {
+  assert.match(recommendationFallbackMessage({ failureCategory: 'NO_CANDIDATES' }), /未调用 AI/)
+  assert.match(recommendationFallbackMessage({ failureCategory: 'LLM_TIMEOUT' }), /超时/)
+  assert.match(recommendationFallbackMessage({ failureCategory: 'EMPTY_RESPONSE' }), /未返回有效/)
+  assert.match(recommendationFallbackMessage({ failureCategory: 'VALIDATION_FAILED' }), /未通过核验/)
 })
 
 test('竞赛类别没有伪造“正在报名”', () => {

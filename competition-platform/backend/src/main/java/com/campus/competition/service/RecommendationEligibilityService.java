@@ -104,8 +104,13 @@ public class RecommendationEligibilityService {
     public CompetitionRule assessCompetition(Competition competition, ParticipantProfile profile,
                                              AdvicePreferences preferences, int windowDays) {
         CompetitionRule rule = new CompetitionRule(competition);
+        if (preferences.getExcludedCompetitionIds().contains(competition.getId())) return exclude(rule, "本轮更换已展示赛事");
+        if ("UNRESOLVED".equals(preferences.getCompetitionIntentStatus()) || "AMBIGUOUS".equals(preferences.getCompetitionIntentStatus())) return exclude(rule, "指定赛事待确认，不能放宽条件");
+        if (!preferences.getResolvedCompetitionIds().isEmpty() && !preferences.getResolvedCompetitionIds().contains(competition.getId())) return exclude(rule, "不属于指定赛事");
+        if (preferences.getResolvedCompetitionIds().isEmpty() && !preferences.getCompetitionKeywords().isEmpty() && preferences.getCompetitionKeywords().stream()
+                .noneMatch(k -> competition.getName() != null && competition.getName().toLowerCase(Locale.ROOT).contains(k.toLowerCase(Locale.ROOT)))) return exclude(rule, "不属于指定赛事");
         LocalDateTime now = now();
-        LocalDateTime windowEnd = now.plusDays(windowDays);
+        LocalDateTime windowEnd = preferences.isWindowUnrestricted() ? LocalDateTime.MAX : now.plusDays(windowDays);
         String corpus = join(competition.getName(), competition.getDescription(),
                 competition.getTags(), competition.getEligibilityText());
 
@@ -397,6 +402,12 @@ public class RecommendationEligibilityService {
                                Map<Long, Set<String>> memberCapabilities, ParticipantProfile profile,
                                AdvicePreferences preferences, boolean alreadyApplied) {
         TeamRule rule = new TeamRule(team);
+        if (preferences.getExcludedTeamIds().contains(team.getId())) return exclude(rule, "本轮更换已展示队伍");
+        if (competition != null) {
+            AdvicePreferences associated = preferences.copy(); associated.setExcludedCompetitionIds(List.of());
+            var compRule = assessCompetition(competition, profile, associated, preferences.getWindowDays() == null ? 90 : preferences.getWindowDays());
+            if (!compRule.recommendable()) return exclude(rule, compRule.excludeReason);
+        } else if (!preferences.getCompetitionKeywords().isEmpty()) return exclude(rule, "无法核查所属赛事");
         LocalDateTime now = now();
         rule.competitionName = competition == null ? null : competition.getName();
         rule.competitionSignupEnd = competition == null ? null : competition.getSignupEnd();
@@ -621,6 +632,7 @@ public class RecommendationEligibilityService {
 
     /** 本次已确认的每周时间优先于档案；没有对话覆盖时才使用档案值。 */
     private Integer effectiveWeeklyHours(ParticipantProfile profile, AdvicePreferences preferences) {
+        if (preferences.isWeeklyHoursUnrestricted()) return null;
         return preferences.getWeeklyHours() != null
                 ? preferences.getWeeklyHours() : profile.effectiveWeeklyHours();
     }

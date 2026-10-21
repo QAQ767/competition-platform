@@ -28,3 +28,10 @@ test('勾选只看队伍后直接展示队伍页签', () => {
   assert.equal(preferredResultTab({ teamOnly: false }), 'competitions')
   assert.equal(preferredResultTab(null), 'competitions')
 })
+
+test('取消日期限制不回落90天，三种输出目标优先于旧布尔值', () => {
+  assert.equal(effectiveWindowDays({ windowDays: null, windowUnrestricted: true }), null)
+  assert.equal(preferredResultTab({ outputTarget: 'COMPETITIONS', teamOnly: true }), 'competitions')
+  assert.equal(preferredResultTab({ outputTarget: 'TEAMS' }), 'teams')
+  assert.equal(preferredResultTab({ outputTarget: 'BOTH' }), 'competitions')
+})

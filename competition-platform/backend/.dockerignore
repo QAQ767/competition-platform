@@ -2,4 +2,6 @@ target/
 data/
 uploads/
 *.log
+.env
+.env.*
 .mvn/

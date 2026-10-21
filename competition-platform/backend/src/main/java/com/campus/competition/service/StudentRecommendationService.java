@@ -53,7 +53,7 @@ public class StudentRecommendationService {
     private static final Logger log = LoggerFactory.getLogger(StudentRecommendationService.class);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int RECALL = 20;
-    private static final int MODEL_CANDIDATES = 10;
+    private static final int MODEL_CANDIDATES = 5;
     private static final int FINAL = 5;
 
     private final CompetitionMapper competitionMapper;
@@ -87,13 +87,17 @@ public class StudentRecommendationService {
         this.objectMapper = objectMapper;
     }
 
+    public List<Competition> competitionCatalog() {
+        return competitionMapper.selectList(null);
+    }
+
     public StudentRecommendationVO recommend(ParticipantProfile profile, AdvicePreferences preferences, int windowDays) {
         LocalDateTime now = eligibility.now();
         Map<String, Integer> excluded = new LinkedHashMap<>();
 
         List<RecommendationEligibilityService.CompetitionRule> competitionRules = new ArrayList<>();
         // “只看队伍”是硬筛选，不只是队伍加分：勾选后不召回竞赛。
-        boolean teamOnly = Boolean.TRUE.equals(preferences.getTeamOnly());
+        boolean teamOnly = !preferences.wantsCompetitions();
         if (!teamOnly) {
             for (Competition competition : competitionMapper.selectList(
                     new LambdaQueryWrapper<Competition>().orderByAsc(Competition::getSignupEnd))) {
@@ -127,7 +131,7 @@ public class StudentRecommendationService {
         List<RecommendationEligibilityService.TeamRule> teamRules = new ArrayList<>();
         List<AppliedTeamVO> applied = new ArrayList<>();
         Map<Long, Set<String>> skillCache = new HashMap<>();
-        for (Team team : teams) {
+        for (Team team : preferences.wantsTeams() ? teams : List.<Team>of()) {
             List<TeamMember> members = membersByTeam.getOrDefault(team.getId(), new ArrayList<>());
             reconcile(team, members);
             Competition competition = competitionById.get(team.getCompetitionId());
@@ -160,6 +164,8 @@ public class StudentRecommendationService {
         List<TeamRecommendationVO> teamVos = teamRules.stream()
                 .limit(MODEL_CANDIDATES).map(this::toTeamVO).collect(Collectors.toList());
 
+        int retries = 0;
+        String failureCategory = null;
         String mode = "RULE";
         String fallbackReason = null;
         String insight = null;
@@ -174,34 +180,50 @@ public class StudentRecommendationService {
                 if (result.isOk()) {
                     StudentRecommendationAi.Application application =
                             StudentRecommendationAi.apply(result.getContent(), competitionVos, teamVos);
+                    if (!application.ok && LlmCallBudget.remainingMillis(llmProperties.getTimeoutSeconds()) > 3000) {
+                        retries = 1;
+                        var retry = llmService.generateStructured(prompt(profile, preferences, competitionRules, teamRules, windowDays)
+                                + "\n上次校验失败：" + application.error + "。请纠正，每个候选 ID 恰好一次，完整遵守 Schema。",
+                                StudentRecommendationAi.schema(competitionVos.stream().map(CompetitionRecommendationVO::getId).toList(), teamVos.stream().map(TeamRecommendationVO::getId).toList()), 6000);
+                        if (retry.isOk()) application = StudentRecommendationAi.apply(retry.getContent(), competitionVos, teamVos);
+                        log.info("recommend phase=validation retry=1 accepted={}", application.ok);
+                    }
                     if (application.ok) {
                         mode = "LLM";
                         insight = application.insight;
                     } else {
+                        failureCategory = "VALIDATION_FAILED";
                         fallbackReason = "模型输出未通过校验（" + application.error
                                 + "），已回退完整规则结果";
                         log.warn("推荐模型输出校验失败: {}", application.error);
                     }
                 } else {
+                    failureCategory = result.getError();
                     fallbackReason = "模型调用失败，已回退规则结果：" + result.getMessage();
                 }
             } else {
+                failureCategory = "LLM_NOT_CONFIGURED";
                 fallbackReason = llmProperties.configStatus() + "，使用规则匹配";
             }
         }
 
-        List<CompetitionRecommendationVO> finalCompetitions = revalidateCompetitions(competitionVos);
+        if (competitionVos.isEmpty() && teamVos.isEmpty()) {
+            fallbackReason = "当前条件没有符合资格的候选，本轮未调用模型排序";
+            failureCategory = "NO_CANDIDATES";
+        }
+        List<CompetitionRecommendationVO> finalCompetitions = revalidateCompetitions(competitionVos, profile, preferences, windowDays);
         List<TeamRecommendationVO> finalTeams = revalidateTeams(teamVos, profile, preferences);
 
         StudentRecommendationVO vo = new StudentRecommendationVO();
+        vo.setRetryCount(retries); vo.setFailureCategory(failureCategory);
         vo.setMode(mode);
         vo.setFallbackReason(fallbackReason);
         vo.setGeneratedAt(now);
         vo.setProfileSummary(summary(profile));
         vo.setMissingFields(profile.missingFields());
         vo.setConfidence(confidence(profile, finalCompetitions, finalTeams));
-        vo.setInsight(insight);
-        vo.setWindowDays(windowDays);
+        vo.setInsight(finalCompetitions.size() != competitionVos.size() || finalTeams.size() != teamVos.size() ? null : insight);
+        vo.setWindowDays(preferences.isWindowUnrestricted() ? null : windowDays);
         vo.setCompetitions(finalCompetitions);
         vo.setTeams(finalTeams);
         vo.setAppliedTeams(applied);
@@ -211,15 +233,18 @@ public class StudentRecommendationService {
 
     // ==================== 结果二次校验 ====================
 
-    private List<CompetitionRecommendationVO> revalidateCompetitions(List<CompetitionRecommendationVO> candidates) {
+    private List<CompetitionRecommendationVO> revalidateCompetitions(List<CompetitionRecommendationVO> candidates, ParticipantProfile profile, AdvicePreferences preferences, int windowDays) {
         List<CompetitionRecommendationVO> result = new ArrayList<>();
         for (CompetitionRecommendationVO candidate : candidates) {
             if (result.size() >= FINAL) break;
             Competition competition = competitionMapper.selectById(candidate.getId());
             if (competition == null) continue;
             RecommendationEligibilityService.CompetitionRule rule = eligibility.assessCompetition(
-                    competition, ParticipantProfile.forValidation(candidate.getId()), new AdvicePreferences(), 3650);
-            if (rule.recommendable()) result.add(candidate);
+                    competition, profile, preferences, windowDays);
+            if (rule.recommendable()) {
+                candidate.setName(competition.getName()); candidate.setSignupStart(competition.getSignupStart()); candidate.setSignupEnd(competition.getSignupEnd());
+                candidate.setCategory(rule.category.name()); candidate.setCategoryLabel(competitionCategoryLabel(rule.category)); result.add(candidate);
+            }
         }
         return result;
     }
@@ -247,6 +272,10 @@ public class StudentRecommendationService {
             RecommendationEligibilityService.TeamRule rule = eligibility.assessTeam(
                     team, competition, members, Map.of(), profile, preferences, false);
             if (rule.recommendable()) {
+                candidate.setTitle(team.getTitle()); candidate.setCompetitionId(team.getCompetitionId());
+                candidate.setCompetitionName(competition == null ? null : competition.getName());
+                candidate.setCategory(rule.category.name()); candidate.setCategoryLabel(teamCategoryLabel(rule.category));
+                candidate.setDeadline(team.getDeadline()); candidate.setMaxMembers(team.getMaxMembers());
                 candidate.setMemberCount(members.size());
                 candidate.setRemainingPlaces(Math.max(0,
                         (team.getMaxMembers() == null ? 0 : team.getMaxMembers()) - members.size()));
@@ -376,9 +405,10 @@ public class StudentRecommendationService {
                 + "不得添加、修改或编造赛事/队伍 ID、名称、日期、资格与经历。"
                 + "只能对给定 ID 重排并解释。评分 0-100 是相对匹配度，不是获奖或录取概率。"
                 + "理由必须引用档案或队伍的真实字段；资料不足要明确说明待确认，不能编造。"
+                + "所有面向用户的理由、风险和建议都使用自然中文，把 requiredSkills 等内部字段称为‘招募技能’，不要展示英文属性名。"
                 + "竞赛和队伍两个列表都要完整覆盖给定 ID 且每个 ID 只出现一次；"
                 + "risks 最多 3 条；suggestedRole 只填一个简短角色（最多 12 个汉字，不要用斜杠列举多个角色）。"
-                + "不要展示思考过程，只输出 JSON。时间窗口 " + windowDays + " 天。"
+                + "不要展示思考过程，只输出 JSON。时间窗口：" + (preferences.isWindowUnrestricted() ? "不限制未来日期范围" : windowDays + " 天") + "。"
                 + "只允许竞赛 ID " + competitionIds + "，队伍 ID " + teamIds + "。数据：" + json;
     }
 
@@ -466,15 +496,16 @@ public class StudentRecommendationService {
             excluded.forEach((key, value) -> parts.add(key + " " + value + " 项"));
             notes.add("已按规则排除：" + String.join("；", parts));
         }
-        if (competitions.isEmpty() && !Boolean.TRUE.equals(preferences.getTeamOnly())) {
+        if (competitions.isEmpty() && preferences.wantsCompetitions()) {
             notes.add("当前没有符合条件的竞赛，可放宽时间范围或补充技能/方向后再试");
         }
-        if (teams.isEmpty()) {
+        if (teams.isEmpty() && preferences.wantsTeams()) {
             notes.add("当前没有可申请且未满员的队伍，可放宽时间范围或稍后刷新");
         }
-        notes.add("本次按 " + windowDays + " 天窗口筛选");
+        notes.add(preferences.isWindowUnrestricted() ? "本次未限制未来日期范围，仍校验报名截止和资格" : "本次按 " + windowDays + " 天窗口筛选");
+        if ("COMPETITIONS".equals(preferences.getOutputTarget())) notes.add("本轮只看比赛，不返回队伍推荐");
         if (Boolean.TRUE.equals(preferences.getTeamOnly())) {
-            notes.add("你勾选了“只看队伍”，本次不返回竞赛推荐；取消勾选可同时查看竞赛");
+            notes.add("本轮只看队伍；说“同时推荐竞赛和队伍”可同时查看");
         }
         if ("NOT_PARTICIPATE".equals(profile.getCompeteStatus())
                 || "ONLY_VIEW".equals(profile.getCompeteStatus())) {

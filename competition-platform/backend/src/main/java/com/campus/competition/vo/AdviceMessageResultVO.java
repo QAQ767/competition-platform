@@ -9,6 +9,9 @@ import java.util.List;
 /** 发送一条对话后的结果。 */
 public class AdviceMessageResultVO {
 
+    private com.campus.competition.vo.StudentRecommendationVO recommendation;
+    public com.campus.competition.vo.StudentRecommendationVO getRecommendation() { return recommendation; }
+    public void setRecommendation(com.campus.competition.vo.StudentRecommendationVO v) { recommendation = v; }
     private String sessionId;
     private Integer version;
     private String reply;

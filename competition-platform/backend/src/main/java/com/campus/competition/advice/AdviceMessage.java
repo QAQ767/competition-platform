@@ -6,6 +6,9 @@ import java.util.List;
 /** 会话中的一条消息。changes/questions 只保存结构化摘要，不保存模型思考过程。 */
 public class AdviceMessage {
 
+    private com.campus.competition.vo.StudentRecommendationVO recommendation;
+    public com.campus.competition.vo.StudentRecommendationVO getRecommendation() { return recommendation; }
+    public void setRecommendation(com.campus.competition.vo.StudentRecommendationVO v) { recommendation = v; }
     private String role;
     private String content;
     private String at;

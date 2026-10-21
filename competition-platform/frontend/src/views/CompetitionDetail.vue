@@ -5,7 +5,7 @@
       description="核对报名时间、参赛条件与来源，再决定是否组队或申请。"
       eyebrow="COMPETITION DETAIL"
     >
-      <el-button size="small" @click="router.push('/advice')">回到参赛推荐</el-button>
+      <el-button size="small" @click="router.push('/?assistant=advice')">问小智找比赛</el-button>
     </PageHeading>
 
     <el-result

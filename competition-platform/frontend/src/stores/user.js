@@ -6,11 +6,11 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('token') || '',
     refreshToken: localStorage.getItem('refreshToken') || '',
-    user: JSON.parse(localStorage.getItem('user') || 'null')
+    user: JSON.parse(localStorage.getItem('user') || 'null'),
   }),
   getters: {
     isLogin: (s) => !!s.token,
-    isAdmin: (s) => !!s.user && s.user.role === 'ADMIN'
+    isAdmin: (s) => !!s.user && s.user.role === 'ADMIN',
   },
   actions: {
     async login(form) {
@@ -40,6 +40,15 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('user', JSON.stringify(user))
     },
     async logout() {
+      const userId = this.user?.id
+      if (userId) {
+        for (const key of [
+          `xiaozhi-advice-${userId}`,
+          `xiaozhi-learning-${userId}`,
+          `xiaozhi-history-${userId}`,
+        ])
+          localStorage.removeItem(key)
+      }
       // 通知后端将当前 access token 加入黑名单（Redis），实现主动下线
       try {
         await api.post('/auth/logout')
@@ -53,6 +62,6 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem('token')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
-    }
-  }
+    },
+  },
 })

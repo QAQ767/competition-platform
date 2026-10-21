@@ -17,9 +17,9 @@ import java.util.regex.Pattern;
 public final class RulePreferenceExtractor {
 
     private static final Pattern HOURS = Pattern.compile(
-            "(?:每(?:周|星期)|周均)[^，。；;\\n]{0,12}?(\\d{1,2})\\s*(?:个)?\\s*小时"
-                    + "|(?:只能|最多|大概|大约|可以)?投入[^，。；;\\n]{0,8}?(\\d{1,2})\\s*(?:个)?\\s*小时"
-                    + "|(\\d{1,2})\\s*小时\\s*/\\s*(?:周|星期)");
+            "(?:每(?:周|星期)|周均)[^，。；;\\n]{0,12}?([0-9零〇一二两三四五六七八九十]{1,3})\\s*(?:个)?\\s*小时"
+                    + "|(?:只能|最多|大概|大约|可以)?投入[^，。；;\\n]{0,8}?([0-9零〇一二两三四五六七八九十]{1,3})\\s*(?:个)?\\s*小时"
+                    + "|([0-9零〇一二两三四五六七八九十]{1,3})\\s*小时\\s*/\\s*(?:周|星期)");
     private static final Pattern SKILL = Pattern.compile(
             "(?:会|熟悉|掌握|用过|使用|了解)\\s*([A-Za-z][A-Za-z0-9+#.\\-]{0,14}|[\\u4e00-\\u9fa5]{2,10})");
     private static final Pattern MISSING_ROLE = Pattern.compile(
@@ -27,12 +27,12 @@ public final class RulePreferenceExtractor {
     private static final Pattern WANT_ROLE = Pattern.compile(
             "(?:想|希望|打算|愿意)(?:做|负责|当|担任|找)?([^，。；;\\n]{1,10}?)(?:方向|角色|的活|的工作|$|[，。；;])");
     private static final Pattern WINDOW = Pattern.compile(
-            "(?:未来|近|最近|接下来)\\s*(\\d{1,3})\\s*天|(\\d{1,3})\\s*天内");
-    private static final Pattern DIFFICULTY_EASY = Pattern.compile("入门|零基础|简单|练手|第一次参加");
+            "(?:未来|近|最近|接下来)\\s*([0-9零〇一二两三四五六七八九十百]{1,5})\\s*天|([0-9零〇一二两三四五六七八九十百]{1,5})\\s*天内");
+    private static final Pattern DIFFICULTY_EASY = Pattern.compile("入门|新手|零基础|简单|练手|第一次参加");
     private static final Pattern DIFFICULTY_HARD = Pattern.compile("进阶|高难度|冲国奖|国赛|省赛|有挑战");
     private static final Pattern NEGATION = Pattern.compile(
             "不参加|不想|不考虑|不报|排除|不要|别参加|拒绝|不感兴趣|不做");
-    private static final Pattern TEAM_ONLY = Pattern.compile("只找队伍|只想加队伍|只考虑队伍|找队伍|加队伍");
+    private static final Pattern TEAM_ONLY = Pattern.compile("只找队伍|只想加队伍|只考虑队伍|只看队伍|只推荐队伍|仅推荐队伍|找队伍|加队伍");
 
     public RuleExtraction extract(String message) {
         RuleExtraction result = new RuleExtraction();
@@ -50,7 +50,7 @@ public final class RulePreferenceExtractor {
             String value = hours.group(1) != null ? hours.group(1)
                     : hours.group(2) != null ? hours.group(2) : hours.group(3);
             try {
-                int parsed = Integer.parseInt(value);
+                int parsed = number(value);
                 if (parsed > 0 && parsed <= 80) weekly = parsed;
             } catch (NumberFormatException ignored) {
                 // 忽略无法解析的数字
@@ -67,12 +67,18 @@ public final class RulePreferenceExtractor {
         List<String> roles = new ArrayList<>();
         List<String> directions = new ArrayList<>();
         List<String> excluded = new ArrayList<>();
+        List<String> reopened = new ArrayList<>();
         for (String clause : clauses) {
             String clean = clause.trim();
             if (clean.isEmpty()) continue;
             boolean negative = NEGATION.matcher(clean).find();
             Set<String> mentioned = TextSignals.capabilities(clean);
-
+            boolean reopen = clean.matches("(?s).*(?:也可以|可以重新|重新考虑|不再排除|取消排除|取消对|撤销排除|允许参加).*" );
+            if (reopen) {
+                reopened.addAll(mentioned);
+                // “不再排除”包含排除字样，但本轮操作是撤销，不再进入否定分支。
+                negative = false;
+            }
             if (negative) {
                 for (String direction : mentioned) {
                     if (!excluded.contains(direction)) excluded.add(direction);
@@ -124,11 +130,15 @@ public final class RulePreferenceExtractor {
             result.changes.add(new PreferenceChange("directions", "REMOVE", excluded));
         }
 
+        if (!reopened.isEmpty()) result.changes.add(new PreferenceChange("excludedKeywords", "REMOVE", reopened));
+        if (text.matches("(?s).*(?:取消|撤销|清空)(?:所有|全部)?排除(?:项|条件|限制).*"))
+            result.changes.add(new PreferenceChange("excludedKeywords", "CLEAR", List.of()));
+
         Matcher window = WINDOW.matcher(text);
         if (window.find()) {
             String value = window.group(1) != null ? window.group(1) : window.group(2);
             try {
-                int days = Integer.parseInt(value);
+                int days = number(value);
                 if (days >= 7 && days <= 365) {
                     result.changes.add(new PreferenceChange("windowDays", "SET", List.of(String.valueOf(days))));
                 }
@@ -137,18 +147,62 @@ public final class RulePreferenceExtractor {
             }
         }
 
+        Matcher months = Pattern.compile("(?:未来|近|最近|接下来)\\s*([0-9一二两三四五六七八九十]{1,3})\\s*个?月").matcher(text);
+        if (months.find()) {
+            int days = number(months.group(1)) * 30;
+            if (days >= 7 && days <= 365) result.changes.add(new PreferenceChange("windowDays", "SET", List.of(String.valueOf(days))));
+        }
+        Matcher shortHours = Pattern.compile("(?:只有|只能|最多)\\s*([0-9零〇一二两三四五六七八九十]{1,3})\\s*小时").matcher(text);
+        if (weekly == null && shortHours.find()) {
+            int h = number(shortHours.group(1));
+            if (h > 0 && h <= 80) result.changes.add(new PreferenceChange("weeklyHours", "SET", List.of(String.valueOf(h))));
+        }
+        if (text.matches("(?s).*(?:取消|不设|不按|不限|不限制)(?:每周|投入|小时|周均).*时间.*")
+                || text.matches("(?s).*(?:每周|投入).*时间(?:不限制|不限).*"))
+            result.changes.add(new PreferenceChange("weeklyHours", "CLEAR", List.of()));
+        if (text.matches("(?s).*(?:取消|不限|不限制)(?:日期|时间范围|日期范围|时间窗口).*"))
+            result.changes.add(new PreferenceChange("windowDays", "CLEAR", List.of()));
+        if (text.matches("(?s).*(?:取消时间限制|不按时间筛选|不限制时间|时间不限).*")) {
+            result.changes.add(new PreferenceChange("weeklyHours", "CLEAR", List.of()));
+            result.changes.add(new PreferenceChange("windowDays", "CLEAR", List.of()));
+        }
         if (DIFFICULTY_EASY.matcher(text).find()) {
             result.changes.add(new PreferenceChange("difficulty", "SET", List.of("入门")));
         } else if (DIFFICULTY_HARD.matcher(text).find()) {
             result.changes.add(new PreferenceChange("difficulty", "SET", List.of("进阶")));
         }
-        if (TEAM_ONLY.matcher(text).find()) {
-            result.changes.add(new PreferenceChange("teamOnly", "SET", List.of("true")));
-        }
-
+        String target = outputTarget(text);
+        if (target != null) result.changes.add(new PreferenceChange("outputTarget", "SET", List.of(target)));
         result.questions.addAll(defaultQuestions(result.changes));
         result.reply = buildReply(result.changes, result.questions);
         return result;
+    }
+
+    /** 明确否定优先于短语子串；“也看看”表示扩展到两类。 */
+    private String outputTarget(String text) {
+        boolean noTeams = text.matches("(?s).*(?:不再|不)(?:找|看|推荐|考虑|要)(?:相关)?(?:队伍|团队).*" );
+        boolean noCompetitions = text.matches("(?s).*(?:不再|不)(?:找|看|推荐|考虑|要)(?:相关)?(?:比赛|竞赛).*" );
+        if (noTeams && noCompetitions) return null;
+        if (noTeams) return "COMPETITIONS";
+        if (noCompetitions) return "TEAMS";
+        if (text.matches("(?s).*(?:比赛|竞赛).*(?:和|及|、).*(?:队伍|团队).*" )
+                || text.matches("(?s).*(?:队伍|团队).*(?:和|及|、).*(?:比赛|竞赛).*" )
+                || text.matches("(?s).*(?:也|不只)(?:想)?(?:看看|看|找|推荐)(?:比赛|竞赛|队伍|团队).*" )) return "BOTH";
+        if (text.matches("(?s).*(?:只|仅)(?:想)?(?:看|要|推荐|找|考虑)(?:相关)?(?:比赛|竞赛).*" )) return "COMPETITIONS";
+        if (text.matches("(?s).*(?:只|仅)(?:想)?(?:看|要|推荐|找|考虑|加)(?:相关)?(?:队伍|团队).*" )
+                || TEAM_ONLY.matcher(text).find() || text.matches("(?s).*推荐相关(?:队伍|团队).*" )) return "TEAMS";
+        return null;
+    }
+
+    private static int number(String value) {
+        if (value.matches("[0-9]+")) return Integer.parseInt(value);
+        int total = 0, digit = 0;
+        for (char c : value.toCharArray()) {
+            if (c == '十') { total += (digit == 0 ? 1 : digit) * 10; digit = 0; }
+            else if (c == '百') { total += (digit == 0 ? 1 : digit) * 100; digit = 0; }
+            else { int n = "零一二三四五六七八九".indexOf(c); digit = c == '两' ? 2 : c == '〇' ? 0 : n; if (digit < 0) throw new NumberFormatException(); }
+        }
+        return total + digit;
     }
 
     private List<String> defaultQuestions(List<PreferenceChange> changes) {

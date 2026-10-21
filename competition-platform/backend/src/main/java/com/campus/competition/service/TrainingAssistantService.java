@@ -34,7 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** 训练中心“小智”：连接本地 Ollama，并把模型回答以 SSE 流返回给浏览器。 */
+/** 训练中心“小智”：连接配置的 DeepSeek 或 Ollama，并把模型回答以 SSE 流返回给浏览器。 */
 @Service
 public class TrainingAssistantService {
     private static final Logger log = LoggerFactory.getLogger(TrainingAssistantService.class);
@@ -45,13 +45,14 @@ public class TrainingAssistantService {
             你是高校竞赛组队与训练平台的学习助手“小智”。请使用简体中文回答。
             你的任务是帮助学生理解知识、分析代码、制定训练计划和设计练习题。
             回答应准确、清晰、循序渐进；涉及代码时说明关键思路，并给出必要的示例。
+            默认先用300至500字回答核心问题，代码示例保持精简。复杂问题分步展开，用户继续追问再补充，避免超长回答被截断。
             不要伪造事实或链接，不确定时明确说明。不要展示内部推理过程，只给出整理后的答案。
             对作业和竞赛题优先启发学生思考，再给关键步骤，避免只抛出最终答案。
             """;
 
     private final LlmProperties properties;
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient;
+    private final LlmService llmService;
     private final ExecutorService executor = new ThreadPoolExecutor(
             2, 2, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(20), task -> {
                 Thread thread = new Thread(task, "xiaozhi-assistant");
@@ -59,17 +60,19 @@ public class TrainingAssistantService {
                 return thread;
             }, new ThreadPoolExecutor.AbortPolicy());
     private final Map<Long, Deque<Long>> requestTimes = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ScheduledExecutorService heartbeats = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "xiaozhi-heartbeat"); thread.setDaemon(true); return thread;
+    });
 
-    @Autowired
     public TrainingAssistantService(LlmProperties properties, ObjectMapper objectMapper) {
-        this(properties, objectMapper, HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5)).build());
+        this(properties, objectMapper, new LlmService(properties, objectMapper));
     }
 
-    TrainingAssistantService(LlmProperties properties, ObjectMapper objectMapper, HttpClient httpClient) {
+    @Autowired
+    public TrainingAssistantService(LlmProperties properties, ObjectMapper objectMapper, LlmService llmService) {
         this.properties = properties;
         this.objectMapper = objectMapper;
-        this.httpClient = httpClient;
+        this.llmService = llmService;
     }
 
     public SseEmitter chat(Long userId, TrainingAssistantReq request) {
@@ -78,8 +81,18 @@ public class TrainingAssistantService {
         emitter.onCompletion(() -> closed.set(true));
         emitter.onTimeout(() -> closed.set(true));
         emitter.onError(error -> closed.set(true));
+        // 持续写 SSE 注释，以便上游暂不吐字时也能发现浏览器取消。
+        var heartbeat = heartbeats.scheduleAtFixedRate(() -> {
+            if (closed.get()) return;
+            try { emitter.send(SseEmitter.event().comment("keepalive")); }
+            catch (Exception disconnected) { closed.set(true); emitter.complete(); }
+        }, 1, 1, TimeUnit.SECONDS);
+        emitter.onCompletion(() -> heartbeat.cancel(false));
+        emitter.onTimeout(() -> heartbeat.cancel(false));
+        emitter.onError(error -> heartbeat.cancel(false));
         try {
             executor.execute(() -> {
+                if (closed.get()) return;
                 try {
                     validateRequest(userId, request);
                     checkRateLimit(userId, System.currentTimeMillis());
@@ -87,7 +100,7 @@ public class TrainingAssistantService {
                     completeWithMessage(emitter, closed, error.getMessage());
                     return;
                 }
-                streamFromOllama(request, emitter, closed);
+                streamAnswer(request, emitter, closed);
             });
         } catch (RejectedExecutionException error) {
             completeWithMessage(emitter, closed, "当前提问人数较多，请稍后再试");
@@ -111,8 +124,8 @@ public class TrainingAssistantService {
                 }
             }
         }
-        if (!properties.isEnabled() || !"ollama".equalsIgnoreCase(properties.getProvider())) {
-            throw new BusinessException(503, "小智当前未启用，请检查 Ollama 配置");
+        if (!properties.isConfigured()) {
+            throw new BusinessException(503, properties.configStatus());
         }
     }
 
@@ -125,57 +138,28 @@ public class TrainingAssistantService {
         times.addLast(now);
     }
 
-    private void streamFromOllama(TrainingAssistantReq request, SseEmitter emitter, AtomicBoolean closed) {
+    private void streamAnswer(TrainingAssistantReq request, SseEmitter emitter, AtomicBoolean closed) {
         try {
-            send(emitter, event("start", properties.getModel()));
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(trimSlash(properties.getBaseUrl()) + "/api/chat"))
-                    .timeout(Duration.ofSeconds(properties.getAssistantTimeoutSeconds()))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(buildBody(request), StandardCharsets.UTF_8))
-                    .build();
-            HttpResponse<java.util.stream.Stream<String>> response = httpClient.send(
-                    httpRequest, HttpResponse.BodyHandlers.ofLines());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException("Ollama HTTP " + response.statusCode());
-            }
-
+            send(emitter, event("start", llmService.providerLabel()));
             ThinkFilter filter = new ThinkFilter();
-            boolean answered = false;
-            try (java.util.stream.Stream<String> lines = response.body()) {
-                Iterator<String> iterator = lines.iterator();
-                while (!closed.get() && iterator.hasNext()) {
-                    String line = iterator.next();
-                    if (line == null || line.isBlank()) continue;
-                    JsonNode root = objectMapper.readTree(line);
-                    String visible = filter.accept(root.path("message").path("content").asText(""));
-                    if (!visible.isEmpty()) {
-                        send(emitter, event("chunk", visible));
-                        answered = true;
-                    }
-                    if (root.path("done").asBoolean(false)) break;
+            AtomicBoolean answered = new AtomicBoolean(false);
+            llmService.stream((ArrayNode) objectMapper.readTree(buildBody(request)).path("messages"), chunk -> {
+                if (closed.get()) return;
+                String visible = filter.accept(chunk);
+                if (!visible.isEmpty()) {
+                    try { send(emitter, event("chunk", visible)); answered.set(true); }
+                    catch (Exception e) { closed.set(true); throw new IllegalStateException("客户端已断开"); }
                 }
-            }
+            }, closed::get);
             String tail = filter.finish();
-            if (!closed.get() && !tail.isEmpty()) {
-                send(emitter, event("chunk", tail));
-                answered = true;
-            }
+            if (!closed.get() && !tail.isEmpty()) { send(emitter, event("chunk", tail)); answered.set(true); }
             if (!closed.get()) {
-                if (!answered) send(emitter, event("error", "小智没有生成有效回答，请换一种问法再试"));
-                else send(emitter, event("done", ""));
+                send(emitter, event(answered.get() ? "done" : "error", answered.get() ? "" : "模型未返回内容，请重试"));
                 emitter.complete();
             }
         } catch (Exception e) {
-            log.warn("小智调用 Ollama 失败: {}", e.getMessage());
-            if (!closed.get()) {
-                try {
-                    send(emitter, event("error", "暂时无法连接本地 AI，请确认 Ollama 已启动且模型可用"));
-                    emitter.complete();
-                } catch (Exception ignored) {
-                    emitter.completeWithError(e);
-                }
-            }
+            log.warn("学习助手失败 provider={} category={}", properties.getProvider(), e.getClass().getSimpleName());
+            completeWithMessage(emitter, closed, e instanceof IllegalStateException ? e.getMessage() : "模型连接失败或超时，请重试");
         }
     }
 
@@ -244,7 +228,7 @@ public class TrainingAssistantService {
     }
 
     @PreDestroy
-    public void shutdown() { executor.shutdownNow(); }
+    public void shutdown() { executor.shutdownNow(); heartbeats.shutdownNow(); }
 
     /** 跨流分片过滤旧版 DeepSeek 可能输出的 think 标签内容。 */
     static final class ThinkFilter {

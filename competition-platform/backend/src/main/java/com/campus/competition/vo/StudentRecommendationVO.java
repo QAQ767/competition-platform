@@ -7,6 +7,12 @@ import java.util.List;
 /** 学生参赛推荐结果。mode=RULE 时 fallbackReason 必须说明原因。 */
 public class StudentRecommendationVO {
 
+    private int retryCount;
+    private String failureCategory;
+    public int getRetryCount() { return retryCount; }
+    public void setRetryCount(int v) { retryCount = v; }
+    public String getFailureCategory() { return failureCategory; }
+    public void setFailureCategory(String v) { failureCategory = v; }
     private String mode;
     private String fallbackReason;
     private LocalDateTime generatedAt;

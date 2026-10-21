@@ -65,7 +65,7 @@
         type="success"
         plain
         style="margin-left: 10px"
-        @click="router.push('/advice')"
+        @click="router.push('/?assistant=advice')"
         >让推荐帮我找队</el-button
       >
     </el-card>

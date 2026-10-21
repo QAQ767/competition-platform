@@ -29,8 +29,8 @@ public class AdvicePreferenceService {
 
     private static final Set<String> FIELDS = Set.of(
             "weeklyHours", "directions", "skills", "roles", "difficulty",
-            "excludedKeywords", "windowDays", "teamOnly", "note");
-    private static final Set<String> OPS = Set.of("SET", "ADD", "REMOVE");
+            "excludedKeywords", "windowDays", "teamOnly", "outputTarget", "competitionKeywords", "note");
+    private static final Set<String> OPS = Set.of("SET", "ADD", "REMOVE", "CLEAR");
 
     static final String SCHEMA = "{\"type\":\"object\",\"additionalProperties\":false,"
             + "\"required\":[\"reply\",\"changes\",\"questions\"],"
@@ -41,11 +41,11 @@ public class AdvicePreferenceService {
             + "\"required\":[\"field\",\"op\",\"values\"],"
             + "\"properties\":{"
             + "\"field\":{\"type\":\"string\",\"enum\":[\"weeklyHours\",\"directions\",\"skills\",\"roles\","
-            + "\"difficulty\",\"excludedKeywords\",\"windowDays\",\"teamOnly\",\"note\"]},"
-            + "\"op\":{\"type\":\"string\",\"enum\":[\"SET\",\"ADD\",\"REMOVE\"]},"
-            + "\"values\":{\"type\":\"array\",\"minItems\":1,\"maxItems\":8,"
+            + "\"difficulty\",\"excludedKeywords\",\"windowDays\",\"teamOnly\",\"outputTarget\",\"competitionKeywords\",\"note\"]},"
+            + "\"op\":{\"type\":\"string\",\"enum\":[\"SET\",\"ADD\",\"REMOVE\",\"CLEAR\"]},"
+            + "\"values\":{\"type\":\"array\",\"minItems\":0,\"maxItems\":8,"
             + "\"items\":{\"type\":\"string\"}}}}},"
-            + "\"questions\":{\"type\":\"array\",\"maxItems\":2,\"items\":{\"type\":\"string\"}}}}}";
+            + "\"questions\":{\"type\":\"array\",\"maxItems\":2,\"items\":{\"type\":\"string\"}}}}";
 
     private final LlmService llmService;
     private final LlmProperties llmProperties;
@@ -72,8 +72,8 @@ public class AdvicePreferenceService {
             }
             if (applied == null) {
                 applied = rule(text, current, profile,
-                        result.getError() != null && result.getError().startsWith("LLM_")
-                                ? "模型输出未通过校验，已回退规则提取：" + result.getMessage()
+                        !result.isOk()
+                                ? "模型调用失败，已回退规则提取：" + result.getMessage()
                                 : "模型输出未通过校验，已回退规则提取");
             }
         } else {
@@ -85,6 +85,43 @@ public class AdvicePreferenceService {
             applied.questions = new ArrayList<>(applied.questions.subList(0, 2));
         }
         return applied;
+    }
+
+    public Applied applyChat(String message, AdvicePreferences current, ParticipantProfile profile) {
+        return applyChat(message, current, profile, List.of());
+    }
+
+    public Applied applyChat(String message, AdvicePreferences current, ParticipantProfile profile,
+                             List<com.campus.competition.entity.Competition> catalog) {
+        Applied result = apply(message, current, profile);
+        var explicit = ruleExtractor.extract(message);
+        // 只应用本轮明确识别的变更，不用“旧值”覆盖模型已经校验通过的新理解。
+        Applied corrected = merge(result.preferences, explicit.changes, profile);
+        result.preferences = corrected.preferences;
+        result.changes.addAll(corrected.changes);
+        var identityQuestions = com.campus.competition.advice.CompetitionIntentResolver.resolve(
+                message, current, result.preferences, catalog);
+        if (!identityQuestions.isEmpty()) {
+            result.questions = new ArrayList<>(identityQuestions);
+            result.clarificationRequired = true;
+        }
+        if (!result.questions.isEmpty() && result.changes.isEmpty()
+                && message.matches("(?s).*(?:那个比赛|那个竞赛|不确定|说不清|没想好).*")) result.clarificationRequired = true;
+        if (!result.clarificationRequired && !result.preferences.getCompetitionKeywords().isEmpty()) {
+            boolean contradictory = catalog.stream().filter(c -> result.preferences.getResolvedCompetitionIds().contains(c.getId()))
+                    .anyMatch(c -> result.preferences.getExcludedKeywords().stream().anyMatch(k ->
+                            c.getName() != null && (c.getName().contains(k) || TextSignals.mentions(c.getName(), TextSignals.canonicalDirection(k)))));
+            if (contradictory) {
+                result.questions = new ArrayList<>(List.of("你指定的赛事与排除项有冲突。要取消相关排除项，还是改看其他赛事？"));
+                result.clarificationRequired = true;
+            }
+        }
+        if (message.matches("(?s).*(?:不再|不)(?:找|看|推荐|要)(?:比赛|竞赛).*" )
+                && message.matches("(?s).*(?:不再|不)(?:找|看|推荐|要)(?:队伍|团队).*" )) {
+            result.questions = new ArrayList<>(List.of("比赛和队伍都暂不查看吗？你也可以明确说只看比赛、只看队伍或两者都看。"));
+            result.clarificationRequired = true;
+        }
+        return result;
     }
 
     private Applied rule(String text, AdvicePreferences current, ParticipantProfile profile, String reason) {
@@ -117,10 +154,10 @@ public class AdvicePreferenceService {
                 String op = row.path("op").asText("");
                 JsonNode valuesNode = row.path("values");
                 if (!FIELDS.contains(field) || !OPS.contains(op)
-                        || !valuesNode.isArray() || valuesNode.isEmpty() || valuesNode.size() > 8) return null;
+                        || !valuesNode.isArray() || (valuesNode.isEmpty() && !"CLEAR".equals(op)) || valuesNode.size() > 8) return null;
                 List<String> values = new ArrayList<>();
                 for (JsonNode value : valuesNode) {
-                    if (!value.isTextual() || value.asText().isBlank() || value.asText().length() > 60) return null;
+                    if (!value.isTextual() || value.asText().isBlank() || value.asText().length() > 80) return null;
                     values.add(value.asText().trim());
                 }
                 if (!validFieldValue(field, op, values)) return null;
@@ -145,6 +182,10 @@ public class AdvicePreferenceService {
     }
 
     private boolean validFieldValue(String field, String op, List<String> values) {
+        if ("CLEAR".equals(op)) return Set.of("weeklyHours", "windowDays", "excludedKeywords", "competitionKeywords").contains(field) && values.isEmpty();
+        if (values.isEmpty()) return false;
+        if ("outputTarget".equals(field)) return "SET".equals(op) && values.size() == 1 && Set.of("COMPETITIONS", "TEAMS", "BOTH").contains(values.get(0));
+        if ("competitionKeywords".equals(field)) return "SET".equals(op) || "ADD".equals(op) || "REMOVE".equals(op);
         if ("weeklyHours".equals(field)) {
             return "SET".equals(op) && parseNumber(values.get(0), 1, 80) != null;
         }
@@ -171,7 +212,23 @@ public class AdvicePreferenceService {
             String field = change.getField();
             String op = change.getOp();
             List<String> values = change.getValues();
+            if ("CLEAR".equals(op)) {
+                switch (field) {
+                    case "weeklyHours" -> { next.setWeeklyHours(null); next.setWeeklyHoursUnrestricted(true); }
+                    case "windowDays" -> { next.setWindowDays(null); next.setWindowUnrestricted(true); }
+                    case "excludedKeywords" -> next.getExcludedKeywords().clear();
+                    case "competitionKeywords" -> { next.setCompetitionKeywords(List.of()); next.setResolvedCompetitionIds(List.of()); next.setCompetitionIntentStatus("NONE"); }
+                    default -> { continue; }
+                }
+                next.markSource(field, AdvicePreferences.SOURCE_DIALOGUE);
+                applied.add(change);
+                continue;
+            }
             switch (field) {
+                case "outputTarget" -> {
+                    next.setOutputTarget(values.get(0)); next.markSource(field, AdvicePreferences.SOURCE_DIALOGUE); applied.add(change);
+                }
+                case "competitionKeywords" -> mergeList(next.getCompetitionKeywords(), op, values, field, next, applied);
                 case "weeklyHours" -> {
                     Integer hours = parseNumber(values.get(0), 1, 80);
                     if (hours != null && !hours.equals(next.getWeeklyHours())) {
@@ -287,7 +344,7 @@ public class AdvicePreferenceService {
 
     private void appendMissingQuestions(Applied applied, ParticipantProfile profile) {
         if (applied.questions.size() >= 2) return;
-        if (applied.preferences.getWeeklyHours() == null && profile.effectiveWeeklyHours() == null) {
+        if (!applied.preferences.isWeeklyHoursUnrestricted() && applied.preferences.getWeeklyHours() == null && profile.effectiveWeeklyHours() == null) {
             applied.questions.add("每周大概能投入多少小时？");
         }
         if (applied.questions.size() < 2
@@ -320,8 +377,13 @@ public class AdvicePreferenceService {
                 + "只提取用户本轮明确说出的内容，不要编造经历、技能、获奖或时间；没有提到的字段不要输出。"
                 + "字段含义：weeklyHours 每周可投入小时数；directions 竞赛方向/兴趣；skills 明确会用的技术；"
                 + "roles 想承担的角色；difficulty 入门或进阶；excludedKeywords 明确不参加/排除的方向；"
-                + "windowDays 未来多少天内；teamOnly 是否只找队伍；note 其他明确约束。"
-                + "op=SET 覆盖、ADD 增加、REMOVE 删除。用户说“不想参加建模了”时，用 excludedKeywords ADD 建模，"
+                + "windowDays 未来多少天内；outputTarget 是 COMPETITIONS（只看比赛）、TEAMS（只看队伍）或 BOTH（两者）；teamOnly 为旧兼容字段，新理解请用 outputTarget。"
+                + "competitionKeywords 是用户明确指定的赛事名称（完整名称或原话中的简称，不要缩成方向，也不要编造）；没有指定则不输出该字段。"
+                + "数量、难度、方向、技能、时间是普通筛选条件，不是赛事名称；例如‘适合新手的比赛’仅提取difficulty，‘算法类比赛/算法相关赛事’仅提取directions，不要设置competitionKeywords。追加普通条件时保留已有赛事身份。note 其他明确约束。"
+                + "op=SET 覆盖、ADD 增加、REMOVE 删除、CLEAR 撤销限制（values为空数组，仅用于 weeklyHours、windowDays、excludedKeywords、competitionKeywords）。"
+                + "中文数字要转换为数字，如‘每周三小时’是 weeklyHours SET [3]（数字必须以字符串输出）。没提到的偏好不要变动。"
+                + "‘现在也可以参加数学建模了’表示 excludedKeywords REMOVE 建模，不自动把方向改成赛事名称；‘取消每周时间限制’是 weeklyHours CLEAR。"
+                + "用户说“不想参加建模了”时，用 excludedKeywords ADD 建模，"
                 + "并用 directions REMOVE 建模。信息不足时最多追问 2 个关键问题；不要重复已确认的信息。"
                 + "reply 用简体中文，150 字以内，不展示思考过程。只输出 JSON。数据：" + json;
     }
@@ -349,6 +411,7 @@ public class AdvicePreferenceService {
 
     /** 一次提取的完整结果。 */
     public static final class Applied {
+        public boolean clarificationRequired;
         public AdvicePreferences preferences;
         public List<PreferenceChange> changes = new ArrayList<>();
         public List<String> questions = new ArrayList<>();

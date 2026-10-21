@@ -18,6 +18,8 @@ competition-platform/backend/uploads/
 
 # ===== 环境与密钥（勿提交）=====
 .env
+.env.*
+!.env.example
 *.log
 
 # ===== IDE =====
