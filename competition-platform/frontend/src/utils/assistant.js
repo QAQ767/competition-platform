@@ -44,3 +44,14 @@ export async function readEventStream(response, onEvent) {
     reader.releaseLock()
   }
 }
+
+export function openAssistant(detail = {}) {
+  window.dispatchEvent(new CustomEvent('xiaozhi-open', { detail }))
+}
+
+export function safeSourceUrl(url) {
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password ? parsed.href : undefined
+  } catch { return undefined }
+}

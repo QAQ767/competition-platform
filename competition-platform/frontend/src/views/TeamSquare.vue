@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="team-square">
     <PageHeading
       title="优秀的伙伴，让热爱走得更远"
       description="发现技能互补的队伍，或发起属于你的竞赛计划。"
@@ -128,7 +128,15 @@
               >查看队伍 <el-icon><ArrowRight /></el-icon
             ></el-button>
             <el-button
-              v-if="store.isLogin && t.status === '招募中'"
+              v-if="store.isLogin && t.joined"
+              type="success"
+              size="small"
+              plain
+              @click.stop="goDetail(t.id)"
+              >我的队伍</el-button
+            >
+            <el-button
+              v-else-if="store.isLogin && t.status === '招募中'"
               type="primary"
               size="small"
               plain
@@ -150,47 +158,31 @@
       @current-change="onTeamPageChange"
     />
 
-    <el-card shadow="never" class="hall-chat">
-      <template #header
-        ><div class="hall-heading">
-          <span>组队交流大厅</span
-          ><small>打个招呼，认识未来的队友 · 点击昵称私聊，右键查看资料</small>
-        </div></template
-      >
-      <div class="hall-msg-list" ref="hallListRef">
-        <div
-          v-if="!hallLoadedAll"
-          class="hall-load-more"
-          @click="loadHallEarlier"
-        >
-          <el-icon class="text-icon" aria-hidden="true"><ArrowUp /></el-icon
-          >加载更早消息
+    <button v-show="!hallOpen" type="button" class="hall-dock" aria-label="打开组队交流大厅" :aria-expanded="hallOpen" @click="hallOpen = true">
+      <span class="hall-dock-icon"><el-icon><ChatDotRound /></el-icon></span>
+      <span class="hall-dock-label"><strong>组队交流大厅</strong><small>在这里遇见未来队友</small></span>
+      <span class="hall-preview">
+        <span v-for="m in recentHallMsgs" :key="m.id" class="hall-preview-line"><b>{{ m.userName }}</b><span>{{ m.content }}</span></span>
+        <span v-if="!recentHallMsgs.length" class="hall-preview-empty">{{ store.isLogin ? '还没有消息，来打个招呼吧' : '登录后，和同学们聊聊组队计划' }}</span>
+      </span>
+      <span class="hall-dock-action">展开交流 <el-icon><ArrowUp /></el-icon></span>
+    </button>
+    <el-drawer v-model="hallOpen" direction="rtl" size="min(640px, 100vw)" :with-header="false" append-to-body class="hall-drawer" @opened="scrollHallBottom">
+      <section class="hall-room" aria-label="组队交流大厅">
+        <header class="hall-room-header"><span class="hall-room-icon"><el-icon><ChatDotRound /></el-icon></span><div><span class="hall-eyebrow">MEET YOUR TEAM</span><h2>组队交流大厅</h2></div><button type="button" aria-label="收起交流大厅" class="hall-close" @click="hallOpen = false">×</button></header>
+        <div class="hall-room-notice"><span class="hall-live-dot"></span>聊目标、找伙伴，点击头像或昵称查看更多操作</div>
+        <div ref="hallListRef" class="hall-msg-list">
+          <button v-if="store.isLogin && !hallLoadedAll" type="button" class="hall-load-more" :disabled="hallLoadingEarlier" @click="loadHallEarlier">{{ hallLoadingEarlier ? '正在加载…' : '加载更早消息' }}</button>
+          <div v-if="!hallMsgs.length" class="hall-empty"><el-icon><Connection /></el-icon><strong>{{ store.isLogin ? '新的合作，从打招呼开始' : '登录后加入交流' }}</strong><p>说说你的技能，或分享想参加的竞赛</p><el-button v-if="!store.isLogin" type="primary" round @click="router.push({path:'/login',query:{redirect:'/teams'}})">登录参与</el-button></div>
+          <article v-for="m in hallMsgs" :key="m.id" class="hall-msg" :class="{ mine: m.userId === store.user?.id }">
+            <button type="button" class="hall-avatar" :aria-label="'查看' + m.userName + '的用户菜单'" @click="openHallUserMenu($event, m)" @contextmenu.prevent="openHallUserMenu($event, m)">{{ (m.userName || '友').slice(0, 1) }}</button>
+            <div class="hall-message-body"><div class="hall-message-meta"><button type="button" class="hall-name" @click="openHallUserMenu($event, m)" @contextmenu.prevent="openHallUserMenu($event, m)">{{ m.userId === store.user?.id ? '我' : m.userName }}</button><time>{{ m.createTime }}</time></div><div class="hall-content">{{ m.content }}</div></div>
+          </article>
         </div>
-        <div v-for="m in hallMsgs" :key="m.id" class="hall-msg">
-          <span
-            class="hall-name"
-            @click="startDm(m)"
-            @contextmenu.prevent="
-              openUserMenu($event, { userId: m.userId, userName: m.userName })
-            "
-            >{{ m.userName }}</span
-          >
-          <span class="hall-content">{{ m.content }}</span>
-          <span class="hall-time">{{ m.createTime }}</span>
-        </div>
-      </div>
-      <div class="hall-input">
-        <el-input
-          v-model="hallText"
-          placeholder="和大厅的同学聊聊组队吧"
-          @keyup.enter="sendHall"
-          :disabled="!store.isLogin"
-        />
-        <el-button type="primary" :disabled="!store.isLogin" @click="sendHall"
-          >发送</el-button
-        >
-      </div>
-    </el-card>
+        <footer class="hall-input"><el-input v-model="hallText" type="textarea" :rows="3" resize="none" maxlength="1000" :placeholder="store.isLogin ? '介绍一下自己，聊聊想加入的队伍…' : '登录后即可参与交流'" aria-label="大厅消息内容" :disabled="!store.isLogin" @keydown="onHallKeydown" /><div class="hall-composer-footer"><span>Enter 发送，Shift + Enter 换行</span><el-button type="primary" round :loading="hallSending" :disabled="!store.isLogin || !hallText.trim()" @click="sendHall">发送消息 <el-icon><Right /></el-icon></el-button></div></footer>
+      </section>
+    </el-drawer>
+
 
     <el-dialog v-model="applyVisible" title="申请加入队伍" width="420px">
       <p style="margin-top: 0">
@@ -274,7 +266,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -283,10 +275,10 @@ import { SKILLS, TEAM_STATUS_TYPE } from '../utils/constants'
 import {
   connectWebSocket,
   isWsOpen,
-  sendWsMessage,
   onWsMessage
 } from '../utils/websocket'
 import { openUserMenu } from '../utils/userMenu'
+import { shouldSendOnEnter } from '../utils/assistant'
 
 const route = useRoute()
 const router = useRouter()
@@ -317,6 +309,14 @@ const createForm = reactive({
 
 // 大厅聊天
 const hallMsgs = ref([])
+const hallOpen = ref(false)
+const hallSending = ref(false)
+const hallLoadingEarlier = ref(false)
+const recentHallMsgs = computed(() => hallMsgs.value.slice(-2))
+function onHallKeydown(event) { if (shouldSendOnEnter(event)) { event.preventDefault(); sendHall() } }
+function scrollHallBottom() { nextTick(() => { const el = hallListRef.value; if (el) el.scrollTop = el.scrollHeight }) }
+function hallNearBottom() { const el = hallListRef.value; return !el || el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
+function mergeHall(incoming) { hallMsgs.value = [...new Map([...hallMsgs.value, ...incoming].map(m => [m.id,m])).values()].sort((a,b) => a.id-b.id) }
 const hallText = ref('')
 const hallListRef = ref(null)
 const hallPage = ref(1)
@@ -331,11 +331,9 @@ function handleWs(msg) {
   if (msg.type === 'HALL' && msg.data) {
     const exist = hallMsgs.value.some((m) => m.id === msg.data.id)
     if (!exist) {
-      hallMsgs.value.push(msg.data)
-      nextTick(() => {
-        const el = hallListRef.value
-        if (el) el.scrollTop = el.scrollHeight
-      })
+      const follow = hallNearBottom()
+      mergeHall([msg.data])
+      if (follow) scrollHallBottom()
     }
   }
 }
@@ -349,64 +347,58 @@ const applying = ref(false)
 async function loadHall() {
   // 聊天接口需要登录；访客只加载公开队伍，避免 401 将广场跳转到登录页。
   if (!store.isLogin) return
-  hallPage.value = 1
-  hallLoadedAll.value = false
+  const follow = hallNearBottom()
   try {
     const data = await api.get('/chat/hall', {
       params: { page: 1, size: hallPageSize }
     })
-    hallMsgs.value = data.records || []
-    hallLoadedAll.value = (data.records || []).length >= data.total
+    mergeHall(data.records || [])
+    hallLoadedAll.value = hallMsgs.value.length >= data.total
   } catch (e) {
     /* 接口层提示错误，保留当前消息 */
   }
-  nextTick(() => {
-    const el = hallListRef.value
-    if (el) el.scrollTop = el.scrollHeight
-  })
+  if (follow) scrollHallBottom()
 }
 
 async function loadHallEarlier() {
+  if (!store.isLogin || hallLoadedAll.value || hallLoadingEarlier.value) return
+  hallLoadingEarlier.value = true
+  const el = hallListRef.value, height = el?.scrollHeight || 0, top = el?.scrollTop || 0
   try {
     const data = await api.get('/chat/hall', {
       params: { page: hallPage.value + 1, size: hallPageSize }
     })
     const older = data.records || []
-    hallMsgs.value = [...older, ...hallMsgs.value]
+    mergeHall(older)
     hallPage.value = data.page
     hallLoadedAll.value = hallMsgs.value.length >= data.total
+    await nextTick()
+    if (el) el.scrollTop = top + el.scrollHeight - height
   } catch (e) {
-    /* ignore */
-  }
+    /* 接口层提示错误 */
+  } finally { hallLoadingEarlier.value = false }
 }
 
 async function sendHall() {
-  if (!store.isLogin) {
-    ElMessage.warning('请先登录')
-    return
-  }
+  if (!store.isLogin || hallSending.value) return
   const content = hallText.value.trim()
   if (!content) return
-  // 优先走 WebSocket 实时推送（服务端广播回来会自动追加）
-  if (sendWsMessage({ type: 'HALL', content })) {
-    hallText.value = ''
-    return
-  }
-  // WS 未连接时降级为 REST
-  await api.post('/chat/hall', { content })
-  hallText.value = ''
-  loadHall()
+  hallSending.value = true
+  try {
+    await api.post('/chat/hall', { content })
+    if (hallText.value.trim() === content) hallText.value = ''
+    await loadHall()
+    scrollHallBottom()
+  } catch { /* 失败保留草稿，接口层显示错误 */ }
+  finally { hallSending.value = false }
 }
 
-function startDm(m) {
-  if (!store.isLogin) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  router.push({ path: '/chat', query: { to: m.userId } })
+function openHallUserMenu(event, message) {
+  openUserMenu(event, { userId: message.userId, userName: message.userName })
 }
 
 function openApply(t) {
+  if (t.joined) { goDetail(t.id); return }
   if (!store.isLogin) {
     ElMessage.warning('请先登录')
     router.push('/login')
@@ -666,4 +658,14 @@ onBeforeUnmount(() => {
 .hall-chat {
   margin-top: 28px;
 }
+.team-square{padding-bottom:135px}
+.hall-dock{position:fixed;left:260px;right:166px;bottom:22px;z-index:900;display:flex;align-items:center;gap:18px;min-height:92px;padding:16px 22px;text-align:left;font:inherit;border:1px solid #dfe7f5;border-radius:18px;background:rgba(255,255,255,.97);box-shadow:0 10px 40px #243c6b18;backdrop-filter:blur(18px);cursor:pointer;transition:box-shadow .2s,border-color .2s}.hall-dock:hover{border-color:#a9bdf0;box-shadow:0 12px 40px #3867ed23}.hall-dock-icon,.hall-room-icon{display:grid;place-items:center;flex-shrink:0;width:46px;height:46px;border-radius:15px;background:#edf2ff;color:#5279dc;font-size:24px}.hall-dock-label{flex-shrink:0}.hall-dock-label strong{display:block;font-size:14px;color:#304460}.hall-dock-label small{display:block;font-size:10px;color:#8c9bb2;margin-top:7px}.hall-preview{min-width:0;flex:1;padding-left:20px;border-left:1px solid #e8edf6;display:flex;flex-direction:column;gap:9px}.hall-preview-line{display:flex;gap:10px;min-width:0;font-size:12px}.hall-preview-line b{color:#59739c;max-width:95px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;flex-shrink:0}.hall-preview-line>span{color:#8795aa;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.hall-preview-empty{font-size:12px;color:#96a3b5;line-height:1.7}.hall-dock-action{color:#5479d8;font-size:12px;display:flex;align-items:center;gap:8px;white-space:nowrap}.hall-room{height:100%;display:flex;flex-direction:column;min-height:0;color:#344862}.hall-room-header{display:flex;align-items:center;gap:14px;padding:25px 26px 20px}.hall-room-header h2{font-size:21px;margin:6px 0 0}.hall-eyebrow{font-size:10px;letter-spacing:2px;color:#92a3bd}.hall-close{margin-left:auto;flex-shrink:0;width:34px;height:34px;border:0;background:#f1f5fb;color:#7185a4;border-radius:10px;font-size:25px;cursor:pointer}.hall-room-notice{display:flex;align-items:center;gap:8px;margin:0 26px 18px;font-size:12px;color:#92a0b4}.hall-live-dot{width:6px;height:6px;border-radius:50%;background:#65b6a5}.hall-msg-list{flex:1;min-height:0;height:auto;overflow:auto;padding:24px;background:#f7f9fd;overscroll-behavior:contain;border-top:1px solid #edf1f8}.hall-load-more{display:block;margin:0 auto 20px;border:0;background:#eaf0fb;color:#7086aa;border-radius:20px;padding:7px 16px;font-size:11px;cursor:pointer}.hall-msg{display:flex;align-items:flex-start;gap:10px;margin-bottom:23px;padding:0;border:0}.hall-avatar{display:grid;place-items:center;flex-shrink:0;width:34px;height:34px;border:0;border-radius:11px;background:#e9efff;color:#5275ce;font-size:14px;cursor:pointer}.hall-message-body{min-width:0;max-width:84%}.hall-message-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:7px}.hall-name{border:0;padding:0;margin:0;background:transparent;font-size:12px;color:#607696;font-weight:600;cursor:pointer}.hall-message-meta time{font-size:10px;color:#9ca9bc}.hall-content{padding:12px 16px;border:1px solid #e7edf6;border-radius:0 14px 14px 14px;background:white;color:#40516a;font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}.hall-msg.mine{flex-direction:row-reverse}.mine .hall-message-meta{justify-content:flex-end}.mine .hall-content{background:#3867ed;color:white;border-color:#3867ed;border-radius:14px 0 14px 14px}.hall-input{display:block;margin:0;padding:16px 24px 20px;border-top:1px solid #e9eef6;background:white}.hall-input :deep(.el-textarea__inner){box-shadow:none;padding:4px 0;line-height:1.8;background:transparent}.hall-composer-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}.hall-composer-footer>span{font-size:11px;color:#98a4b7}.hall-composer-footer .el-icon{margin-left:7px}.hall-empty{text-align:center;color:#93a2b7;font-size:13px;padding:60px 15px;line-height:1.8}.hall-empty>.el-icon{display:block;margin:0 auto 18px;font-size:40px;color:#9bb2e7}.hall-empty strong{display:block;color:#5c7293;font-size:16px}.hall-dock:focus-visible,.hall-close:focus-visible{outline:2px solid #3867ed;outline-offset:3px}
+@media(max-width:1100px){.hall-dock{left:228px;gap:12px;padding:14px 16px}.hall-dock-label small{display:none}.hall-dock-action{font-size:0}.hall-dock-action .el-icon{font-size:16px}}
+@media(max-width:767px){.hall-dock{left:12px;right:12px;bottom:82px;min-height:90px;padding:12px;gap:10px;border-radius:15px}.hall-dock-icon{width:35px;height:35px;border-radius:11px;font-size:20px}.hall-dock-label{display:none}.hall-preview{padding-left:0;border:0;gap:10px}.hall-preview-line{font-size:11px;gap:8px}.hall-preview-line b{max-width:65px}.team-square{padding-bottom:185px}.hall-room-header{padding:20px 18px 16px}.hall-room-notice{margin:0 18px 16px;font-size:11px}.hall-msg-list{padding:18px 12px}.hall-input{padding:12px 16px calc(16px + env(safe-area-inset-bottom))}.hall-message-body{max-width:83%}}
+
+</style>
+<style>
+.hall-drawer .el-drawer__body{padding:0;overflow:hidden}
+.hall-drawer{border-radius:22px 0 0 22px}
+@media(max-width:767px){.hall-drawer{border-radius:0}}
 </style>

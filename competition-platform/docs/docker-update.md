@@ -13,7 +13,7 @@ docker compose logs --tail=80 backend
 
 也可以在未跟踪的 `.env` 中设置 `BACKEND_PORT=8081`，保留本机 8080 服务。Docker 前端仍访问 `http://localhost`，容器内部代理仍使用 `backend:8080`；宿主机直连 Docker API 使用 `http://localhost:8081`。本机 MySQL 与 Docker MySQL 数据卷是不同数据库，不会自动同步。
 
-学生参赛推荐及管理员赛事发现部署时，Compose 已传入 `LLM_TIMEOUT_SECONDS`（默认180）、`SEARCH_PROVIDER`（默认none）和 `BRAVE_SEARCH_API_KEY`（默认空）。真实搜索需另行配置密钥，未配置时使用公告URL/文本导入。Docker 部署固定 `DISCOVERY_ALLOW_FAKE_IP=false`，不放宽抓取地址校验。
+学生参赛推荐和训练助手使用服务端 LLM 配置，单次调用超时默认45秒。管理员赛事发现模块已移除，不再需要搜索API密钥；赛事通过后台竞赛管理手动录入。
 
 仅拉取代码或重启旧容器不会更新镜像；必须执行构建和容器替换。前端镜像使用 `npm ci` 按锁文件安装依赖，包含邮箱修改、关注粉丝列表和头像裁剪功能。Nginx 已配置 `/uploads/` 代理。
 

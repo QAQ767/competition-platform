@@ -43,8 +43,6 @@ public class PreparationSchemaUpgrade implements CommandLineRunner {
         addColumn("competition", "source_url", "VARCHAR(800)");
         addColumn("competition", "source_type", "VARCHAR(30)");
         addColumn("competition", "identity_key", "VARCHAR(80)");
-        addColumn("competition_draft", "reviewed_version", "INT");
-        addColumn("competition_draft_review", "change_summary", "VARCHAR(1000)");
         // 已有库可能已有重复历史数据，建索引失败只记录告警；新的发布仍由事务内查重兜底。
         try {
             if (hasTable("competition") && !hasIndex("competition", "uk_competition_identity")) {

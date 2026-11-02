@@ -68,6 +68,11 @@ llm:
   assistant-max-tokens: ${LLM_ASSISTANT_MAX_TOKENS:1200}
 
 # ===== 学生参赛推荐会话（Redis） =====
+assistant:
+  search-url: ${ASSISTANT_SEARCH_URL:https://api.deepseek.com/v1/tools/search}
+  # 留空时复用 DeepSeek 的 LLM_API_KEY；不会发送给浏览器。
+  search-api-key: ${ASSISTANT_SEARCH_API_KEY:}
+
 advice:
   turn-timeout-seconds: ${ADVICE_TURN_TIMEOUT_SECONDS:90}
   # 会话 TTL（小时），按用户隔离
@@ -81,27 +86,3 @@ advice:
   default-window-days: ${ADVICE_DEFAULT_WINDOW_DAYS:90}
   min-window-days: 7
   max-window-days: 365
-
-# ===== 管理员近期赛事发现 =====
-discovery:
-  search:
-    # none / brave；Brave 需要 BRAVE_SEARCH_API_KEY，密钥只从环境变量注入
-    provider: ${SEARCH_PROVIDER:none}
-    api-key: "${BRAVE_SEARCH_API_KEY:}"
-    endpoint: ${SEARCH_ENDPOINT:https://api.search.brave.com/res/v1/web/search}
-    country: ${SEARCH_COUNTRY:CN}
-    lang: ${SEARCH_LANG:zh-hans}
-  fetch:
-    # 抓取超时、正文大小和重定向上限（SSRF 防护在 PublicHttpFetcher/UrlSafetyPolicy）
-    timeout-seconds: ${DISCOVERY_FETCH_TIMEOUT_SECONDS:15}
-    max-bytes: ${DISCOVERY_FETCH_MAX_BYTES:2097152}
-    max-redirects: ${DISCOVERY_FETCH_MAX_REDIRECTS:3}
-    user-agent: ${DISCOVERY_USER_AGENT:CampusCompetitionDiscovery/1.0 (+admin-triggered)}
-    # 本机代理可能把公网域名解析到 198.18.0.0/15（fake-IP）。默认 false；
-    # 仅本地联调可临时设为 true，生产必须保持 false。
-    allow-fake-ip: ${DISCOVERY_ALLOW_FAKE_IP:false}
-  job:
-    max-results: ${DISCOVERY_MAX_RESULTS:10}
-    concurrency: ${DISCOVERY_CONCURRENCY:2}
-    # 整个作业的总时限：到点后不再开始新的抓取/提取，单次 socket 超时不算总时限
-    timeout-seconds: ${DISCOVERY_JOB_TIMEOUT_SECONDS:300}

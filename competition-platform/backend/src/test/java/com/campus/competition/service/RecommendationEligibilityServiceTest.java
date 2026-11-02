@@ -220,29 +220,6 @@ class RecommendationEligibilityServiceTest {
         assertTrue(rule.risks.stream().anyMatch(r -> r.contains("不会修改你的公开状态")));
     }
 
-    @Test
-    @DisplayName("同一赛事多个报名截止时不擅自择一")
-    void multipleDeadlinesBecomeConflict() {
-        String text = "校内报名截止 2026年5月10日。全国赛报名截止 2026年6月10日。";
-        RuleCompetitionExtractor extractor = new RuleCompetitionExtractor();
-        CompetitionExtraction extraction = extractor.extract(text, "关于举办2026年测试大赛的通知");
-        assertNull(extraction.getSignupEnd());
-        assertFalse(extraction.getConflicts().isEmpty());
-        assertTrue(extraction.getConflicts().get(0).contains("多个报名截止"));
-    }
-
-    @Test
-    @DisplayName("只有月日的报名截止按当日 23:59:59 暂存并标记 DATE")
-    void dateOnlyDeadlineKeepsEndOfDayPrecision() {
-        String text = "关于举办2026年测试大赛的通知\n主办单位：测试委员会\n报名时间：2026年5月1日至5月20日。";
-        CompetitionExtraction extraction = new RuleCompetitionExtractor().extract(text, null);
-        assertEquals(LocalDateTime.of(2026, 5, 20, 23, 59, 59), extraction.getSignupEnd());
-        assertEquals("DATE", extraction.getSignupEndPrecision());
-        assertTrue(extraction.getDateNote().contains("23:59:59"));
-        assertEquals(LocalDateTime.of(2026, 5, 1, 0, 0), extraction.getSignupStart());
-        assertEquals("测试委员会", extraction.getOrganizer());
-    }
-
     // ==================== 返修回归：报告 R6 ====================
 
     @Test

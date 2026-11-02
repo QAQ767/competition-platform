@@ -323,11 +323,6 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
-    <TrainingAssistant
-      ref="assistantRef"
-      :competition="filters.competition"
-      :tag="filters.tag"
-    />
   </div>
 </template>
 
@@ -337,7 +332,7 @@ import { ElMessage } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
 import { openUserMenu } from '../utils/userMenu'
-import TrainingAssistant from '../components/TrainingAssistant.vue'
+import { openAssistant } from '../utils/assistant'
 import {
   TRAINING_COMPETITIONS,
   TRAINING_DIFFICULTY_TYPE,
@@ -346,7 +341,6 @@ import {
 
 const store = useUserStore()
 const tab = ref('sites')
-const assistantRef = ref(null)
 
 // ===== 训练资源 =====
 const tags = ref([])
@@ -397,7 +391,7 @@ function onSitePage(p) {
 }
 
 function askAbout(site) {
-  assistantRef.value?.openWithResource(site)
+  openAssistant({ resource: site })
 }
 
 async function loadFavoriteIds() {

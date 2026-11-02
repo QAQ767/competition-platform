@@ -4,13 +4,14 @@
     <div
       v-if="state.visible"
       class="uctx-overlay"
+      :style="{ zIndex: state.zIndex }"
       @click="close"
       @contextmenu.prevent="close"
     ></div>
     <div
       v-if="state.visible"
       class="uctx-menu"
-      :style="{ left: state.x + 'px', top: state.y + 'px' }"
+      :style="{ left: state.x + 'px', top: state.y + 'px', zIndex: state.zIndex + 1 }"
     >
       <div class="uctx-title">
         <div class="uctx-nick">{{ state.userName || '用户' }}</div>
@@ -132,6 +133,7 @@ async function follow() {
 }
 
 async function openInviteDialog() {
+  close()
   if (!store.isLogin) {
     close()
     ElMessage.warning('请先登录')

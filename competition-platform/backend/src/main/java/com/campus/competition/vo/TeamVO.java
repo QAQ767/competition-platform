@@ -11,6 +11,11 @@ import java.util.List;
 public class TeamVO {
 
     private Long id;
+    private boolean joined;
+
+    public boolean isJoined() { return joined; }
+
+    public void setJoined(boolean joined) { this.joined = joined; }
     private Long competitionId;
     private String competitionName;
     private Long captainId;

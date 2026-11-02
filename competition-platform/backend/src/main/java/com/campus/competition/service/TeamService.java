@@ -1,9 +1,11 @@
 package com.campus.competition.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.competition.common.BusinessException;
 import com.campus.competition.common.PageVO;
+import com.campus.competition.common.UserContext;
 import com.campus.competition.dto.ApplyReq;
 import com.campus.competition.dto.TeamCreateReq;
 import com.campus.competition.entity.Competition;
@@ -67,23 +69,38 @@ public class TeamService {
 
     public PageVO<TeamVO> list(Long competitionId, String skill, String status, String keyword,
                                long page, long size) {
-        LambdaQueryWrapper<Team> qw = new LambdaQueryWrapper<>();
+        Long userId = UserContext.getUserId();
+        List<Long> joinedIds = userId == null ? java.util.Collections.emptyList() :
+                teamMemberMapper.selectList(new LambdaQueryWrapper<TeamMember>()
+                        .eq(TeamMember::getUserId, userId)).stream()
+                        .map(TeamMember::getTeamId).distinct().collect(Collectors.toList());
+        QueryWrapper<Team> qw = new QueryWrapper<>();
         if (competitionId != null) {
-            qw.eq(Team::getCompetitionId, competitionId);
+            qw.eq("competition_id", competitionId);
         }
         if (status != null && !status.isBlank()) {
-            qw.eq(Team::getStatus, status);
+            qw.eq("status", status);
         }
         if (keyword != null && !keyword.isBlank()) {
-            qw.like(Team::getTitle, keyword);
+            qw.like("title", keyword);
         }
         if (skill != null && !skill.isBlank()) {
-            qw.like(Team::getSkills, skill);
+            qw.like("skills", skill);
         }
-        qw.orderByDesc(Team::getCreatedAt);
+        // Sort before pagination so joined teams are first across the entire filtered list.
+        // IDs are database Long values, never request-supplied SQL fragments.
+        if (!joinedIds.isEmpty()) {
+            String ids = joinedIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+            qw.orderByDesc("CASE WHEN id IN (" + ids + ") THEN 1 ELSE 0 END");
+        }
+        qw.orderByDesc("created_at", "id");
         Page<Team> result = teamMapper.selectPage(new Page<>(page, size), qw);
         List<TeamVO> records = result.getRecords().stream()
-                .map(t -> TeamVOHelper.toTeamVO(t, competitionMapper, userMapper))
+                .map(t -> {
+                    TeamVO vo = TeamVOHelper.toTeamVO(t, competitionMapper, userMapper);
+                    vo.setJoined(joinedIds.contains(t.getId()));
+                    return vo;
+                })
                 .collect(Collectors.toList());
         return new PageVO<>(records, result.getTotal(), result.getCurrent(), result.getSize(), result.getPages());
     }

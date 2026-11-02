@@ -214,6 +214,7 @@
     </div>
   </div>
   <UserContextMenu />
+  <ChatAssistant />
 </template>
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
@@ -233,6 +234,7 @@ import api from './api'
 import { useUserStore } from './stores/user'
 import { connectWebSocket, onWsMessage } from './utils/websocket'
 import UserContextMenu from './components/UserContextMenu.vue'
+import ChatAssistant from './components/ChatAssistant.vue'
 
 const router = useRouter()
 const route = useRoute()

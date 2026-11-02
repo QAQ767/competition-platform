@@ -46,6 +46,7 @@ export const useUserStore = defineStore('user', {
           `xiaozhi-advice-${userId}`,
           `xiaozhi-learning-${userId}`,
           `xiaozhi-history-${userId}`,
+          `xiaozhi-global-${userId}`,
         ])
           localStorage.removeItem(key)
       }

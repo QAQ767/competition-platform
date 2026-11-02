@@ -5,7 +5,7 @@
       description="核对报名时间、参赛条件与来源，再决定是否组队或申请。"
       eyebrow="COMPETITION DETAIL"
     >
-      <el-button size="small" @click="router.push('/?assistant=advice')">问小智找比赛</el-button>
+      <el-button size="small" @click="openAssistant({ prompt: '帮我推荐适合我的比赛和队伍' })">问小智找比赛</el-button>
     </PageHeading>
 
     <el-result
@@ -116,6 +116,7 @@
 </template>
 
 <script setup>
+import { openAssistant } from '../utils/assistant'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Link } from '@element-plus/icons-vue'

@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 服务端权限集成测试：学生不能调用管理员接口，也不能绕过草稿直接写竞赛。
+ * 服务端权限集成测试：学生不能调用管理员接口，不能直接写竞赛。
  * 使用 H2 + MockMvc，不依赖本机 MySQL/Redis。
  */
 @SpringBootTest
@@ -38,7 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.sql.init.mode=always",
         "spring.sql.init.encoding=UTF-8",
         "llm.enabled=false",
-        "discovery.search.provider=none",
         "advice.session-ttl-hours=1"
 })
 class AdminSecurityIntegrationTest {
@@ -68,27 +67,30 @@ class AdminSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("学生访问管理员草稿接口被服务端拒绝")
-    void studentCannotAccessAdminDraftApi() throws Exception {
-        mvc.perform(get("/api/admin/competition-drafts").header("Authorization", "Bearer " + studentToken))
-                .andExpect(status().isForbidden());
-        mvc.perform(get("/api/admin/competition-discovery/status")
-                        .header("Authorization", "Bearer " + studentToken))
-                .andExpect(status().isForbidden());
+    @DisplayName("赛事发现和草稿路由已移除，管理员也无法调用")
+    void removedDiscoveryEndpointsReturnNotFound() throws Exception {
+        for (String path : new String[]{"/api/admin/competition-discovery/status",
+                "/api/admin/competition-discovery/jobs/1", "/api/admin/competition-drafts",
+                "/api/admin/competition-drafts/1"}) {
+            mvc.perform(get(path).header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isNotFound());
+        }
         mvc.perform(post("/api/admin/competition-discovery/jobs")
-                        .header("Authorization", "Bearer " + studentToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"mode\":\"TEXT\",\"text\":\"这是一个足够长的测试公告正文内容\"}"))
-                .andExpect(status().isForbidden());
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"TEXT\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/admin/competition-drafts/1/publish")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("学生直接调用原竞赛写接口也被方法级权限拒绝")
-    void studentCannotBypassDraftByCreatingCompetition() throws Exception {
+    @DisplayName("学生调用竞赛写接口被方法级权限拒绝")
+    void studentCannotCreateCompetition() throws Exception {
         mvc.perform(post("/api/competitions")
                         .header("Authorization", "Bearer " + studentToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"绕过草稿的竞赛\"}"))
+                        .content("{\"name\":\"无权限创建的竞赛\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(403));
         mvc.perform(delete("/api/competitions/999")
@@ -96,23 +98,20 @@ class AdminSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(403));
         Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM competition WHERE name='绕过草稿的竞赛'", Integer.class);
+                "SELECT COUNT(*) FROM competition WHERE name='无权限创建的竞赛'", Integer.class);
         assertEquals(0, count);
     }
 
     @Test
-    @DisplayName("管理员可以写竞赛并读取发现配置状态")
-    void adminCanWriteAndReadDiscoveryStatus() throws Exception {
+    @DisplayName("管理员仍可手动创建竞赛")
+    void adminCanCreateCompetition() throws Exception {
         mvc.perform(post("/api/competitions")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"管理员创建的竞赛\",\"organizer\":\"测试\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
-        mvc.perform(get("/api/admin/competition-discovery/status")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.searchConfigured").value(false));
+
     }
 
     @Test

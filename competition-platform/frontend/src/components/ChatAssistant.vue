@@ -3,7 +3,7 @@
     type="button"
     class="xiaozhi-launcher"
     :class="{ open: visible }"
-    :aria-label="advice ? '打开参赛助手小智' : '打开 AI 学习助手小智'"
+    aria-label="打开小智助手"
     @click="togglePanel"
   >
     <el-icon><MagicStick /></el-icon>
@@ -14,7 +14,7 @@
     <section
       v-if="visible"
       class="xiaozhi-panel"
-      :aria-label="advice ? '小智参赛助手' : '小智 AI 学习助手'"
+      aria-label="小智助手"
       @keydown.esc.stop="closePanel"
     >
       <header class="assistant-head">
@@ -25,7 +25,7 @@
           <strong>小智</strong>
           <small
             ><i></i>
-            {{ advice ? '参赛助手 · 找比赛、找队伍' : 'AI 学习助手' }}</small
+            {{ store.isAdmin ? '参赛 · 学习 · 联网查赛事' : '参赛推荐 · 学习问答' }}</small
           >
         </div>
         <button
@@ -53,11 +53,7 @@
           </div>
           <strong>你好，我是小智</strong>
           <p>
-            {{
-              advice
-                ? '可以帮你找比赛、找队伍。说说技能、每周时间或想参加的赛事，一次发送即可查看推荐。'
-                : '可以陪你理解知识点、分析代码、制定计划，也可以出题检验学习效果。'
-            }}
+            找比赛、找队伍、学习知识、制定训练计划，都可以直接问我。{{ store.isAdmin ? '也可以让我联网查找近期赛事。' : '' }}
           </p>
           <div class="quick-prompts">
             <button
@@ -84,6 +80,16 @@
                 <i></i><i></i><i></i>
               </span>
               <span v-else>{{ message.content }}</span>
+              <small v-if="message.mode" class="recommendation-source">{{ { ADVICE: '平台赛事与队伍', SEARCH: '联网赛事信息', LEARNING: '学习与问答' }[message.mode] }}</small>
+              <template v-if="message.sources?.length">
+                <small>查询时间：{{ formatDateTime(message.searchedAt) }} · 外部信息，尚未录入平台</small>
+                <article v-for="(source, sourceIndex) in message.sources" :key="source.url" class="advice-card">
+                  <strong>[{{ sourceIndex + 1 }}] {{ source.title }}</strong>
+                  <p>{{ source.snippet }}</p>
+                  <small v-if="source.publishedAt">网页发布时间：{{ formatDateTime(source.publishedAt) }}</small>
+                  <a :href="safeSourceUrl(source.url)" target="_blank" rel="noopener noreferrer">查看来源原文 ↗</a>
+                </article>
+              </template>
               <template v-if="message.recommendation">
                 <div class="recommendation-source">
                   {{ modeMeta(message.recommendation.mode).label }}
@@ -160,11 +166,7 @@
           :rows="2"
           resize="none"
           maxlength="2000"
-          :placeholder="
-            advice
-              ? '描述参赛需求，Enter 发送，Shift + Enter 换行'
-              : '输入学习问题，Enter 发送，Shift + Enter 换行'
-          "
+          placeholder="说说你的需求，Enter 发送，Shift + Enter 换行"
           @keydown="onKeydown"
         />
         <div class="input-foot">
@@ -190,270 +192,145 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  ChatDotRound,
-  Close,
-  Delete,
-  MagicStick,
-} from '@element-plus/icons-vue'
+import { ChatDotRound, Close, Delete, MagicStick } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
 import api from '../api'
-import {
-  formatDateTime,
-  modeMeta,
-  recommendationFallbackMessage,
-} from '../utils/advice'
-import { isAdviceSessionMissing, readEventStream, shouldSendOnEnter } from '../utils/assistant'
+import { formatDateTime, modeMeta, recommendationFallbackMessage } from '../utils/advice'
+import { isAdviceSessionMissing, readEventStream, shouldSendOnEnter, safeSourceUrl } from '../utils/assistant'
 
-const props = defineProps({
-  scenario: { type: String, default: 'learning' },
-  competition: { type: String, default: '' },
-  tag: { type: String, default: '' },
-})
-const advice = computed(() => props.scenario === 'advice')
-const router = useRouter(),
-  route = useRoute(),
-  store = useUserStore()
-const visible = ref(false),
-  input = ref(''),
-  messages = ref([]),
-  generating = ref(false),
-  resourceName = ref(''),
-  messageList = ref(null)
-const session = ref(null)
-let controller = null,
-  epoch = 0,
-  pendingStop = Promise.resolve()
-const quickPrompts = computed(() =>
-  advice.value
-    ? [
-        '按我的情况推荐比赛和队伍',
-        '我想参加蓝桥杯，只推荐队伍',
-        '适合新手，最近一个月的比赛',
-      ]
-    : [
-        '帮我制定一周训练计划',
-        '用简单例子解释动态规划',
-        '出一道题检验我的掌握程度',
-        '帮我分析这段代码的问题',
-      ],
-)
-function storageKey(id = store.user?.id) {
-  return `xiaozhi-${props.scenario}-${id || 'guest'}`
-}
-function scrollToBottom() {
-  nextTick(() => {
-    if (messageList.value)
-      messageList.value.scrollTop = messageList.value.scrollHeight
-  })
-}
-async function loadHistory() {
-  const current = epoch,
-    owner = store.user?.id
+const store = useUserStore(), router = useRouter(), route = useRoute()
+const visible = ref(false), input = ref(''), messages = ref([]), generating = ref(false)
+const resourceName = ref(''), resourceCompetition = ref(''), messageList = ref(null), session = ref(null)
+let controller = null, epoch = 0, activeMode = '', pendingStop = Promise.resolve()
+const quickPrompts = computed(() => [
+  '按我的情况推荐比赛和队伍', '帮我制定一周训练计划', '用简单例子解释动态规划',
+  ...(store.isAdmin ? ['帮我联网找最近的高校竞赛'] : []),
+])
+const storageKey = (id = store.user?.id) => `xiaozhi-global-${id || 'guest'}`
+function scrollToBottom() { nextTick(() => { if (messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight }) }
+function saveHistory() {
   if (!store.isLogin) return
   try {
-    if (advice.value) {
-      const id = localStorage.getItem(storageKey())
-      if (!id) {
-        session.value = null
-        messages.value = []
-        return
-      }
-      const saved = await api.get(`/ai/advice/sessions/${id}`)
-      if (current !== epoch || owner !== store.user?.id) return
-      session.value = saved
-      messages.value = saved.messages || []
-    } else {
-      const saved = JSON.parse(
-        localStorage.getItem(storageKey()) ||
-          localStorage.getItem(`xiaozhi-history-${owner}`) ||
-          '[]',
-      )
-      if (Array.isArray(saved)) messages.value = saved.slice(-20)
-    }
-  } catch (error) {
-    if (current === epoch) {
-      if (advice.value && isAdviceSessionMissing(error)) {
-        session.value = null
-        messages.value = []
-        localStorage.removeItem(storageKey(owner))
-        ElMessage.info('上次会话已过期或被清空，下次发送将开启新对话')
-      } else if (advice.value) {
-        ElMessage.warning('暂时无法读取会话，原会话已保留，请稍后重试')
-      } else {
-        localStorage.removeItem(storageKey(owner))
-        messages.value = []
-      }
-    }
-  }
+    localStorage.setItem(storageKey(), JSON.stringify({
+      sessionId: session.value?.id,
+      messages: messages.value.filter(m => m.content && !m.loading && !m.error).slice(-20),
+    }))
+  } catch { /* 存储空间不足不影响本轮回答 */ }
+}
+function loadHistory() {
+  if (!store.isLogin) return
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey()) || '{}')
+    messages.value = Array.isArray(saved.messages) ? saved.messages.slice(-20) : []
+    session.value = saved.sessionId ? { id: saved.sessionId } : null
+  } catch { messages.value = []; session.value = null }
   scrollToBottom()
 }
-function saveHistory() {
-  if (!store.isLogin || advice.value) return
-  localStorage.setItem(
-    storageKey(),
-    JSON.stringify(
-      messages.value
-        .filter((m) => m.content && !m.loading && !m.error)
-        .slice(-20)
-        .map(({ role, content }) => ({ role, content })),
-    ),
-  )
-}
-function usePrompt(prompt) {
-  input.value = prompt
-  send()
-}
+function usePrompt(prompt) { input.value = prompt; send() }
 function openWithResource(site) {
   resourceName.value = site?.name || ''
+  resourceCompetition.value = site?.competition || ''
   visible.value = true
   input.value = site?.name ? `我该如何使用「${site.name}」进行有效训练？` : ''
 }
+function onOpen(event) {
+  visible.value = true
+  if (event.detail?.resource) openWithResource(event.detail.resource)
+  else if (event.detail?.prompt) input.value = event.detail.prompt
+  scrollToBottom()
+}
+window.addEventListener('xiaozhi-open', onOpen)
 function stopGenerating(cancelUpstream = true) {
   epoch++
-  controller?.abort()
-  controller = null
-  if (cancelUpstream && generating.value && advice.value && session.value) {
-    const id = session.value.id
-    pendingStop = api
-      .post(`/ai/advice/sessions/${id}/cancel`, {}, { timeout: 5000 })
-      .catch(() => {})
+  controller?.abort(); controller = null
+  if (cancelUpstream && generating.value && activeMode === 'ADVICE' && session.value) {
+    pendingStop = api.post(`/ai/advice/sessions/${session.value.id}/cancel`, {}, { timeout: 5000 }).catch(() => {})
   }
-  messages.value.forEach((m) => {
-    if (m.loading) {
-      m.loading = false
-      m.error = true
-      m.content = m.content ? `${m.content}\n[已停止生成]` : '已停止生成'
-    }
-  })
+  messages.value.forEach(m => { if (m.loading) { m.loading = false; m.error = true; m.content = (m.content || '') + '\n[已停止生成]' } })
   generating.value = false
 }
-function closePanel() {
-  stopGenerating()
-  visible.value = false
-}
-function togglePanel() {
-  if (visible.value) closePanel()
-  else {
-    visible.value = true
-    loadHistory()
-  }
-}
+// 收起面板继续接收回答；只有“停止”、新建、退出登录才取消。
+function closePanel() { visible.value = false }
+function togglePanel() { visible.value = !visible.value; scrollToBottom() }
 async function newChat() {
   const id = session.value?.id
   stopGenerating()
-  session.value = null
-  messages.value = []
-  resourceName.value = ''
+  session.value = null; messages.value = []; resourceName.value = ''; resourceCompetition.value = ''; input.value = ''
   localStorage.removeItem(storageKey())
-  if (advice.value && id)
-    await api.delete(`/ai/advice/sessions/${id}`).catch(() => {})
+  if (id) await api.delete(`/ai/advice/sessions/${id}`).catch(() => {})
 }
-function onKeydown(event) {
-  if (shouldSendOnEnter(event)) {
-    event.preventDefault()
-    send()
-  }
-}
+function onKeydown(event) { if (shouldSendOnEnter(event)) { event.preventDefault(); send() } }
 function retry(message) {
   const index = messages.value.indexOf(message)
   if (index > 0) messages.value.splice(index - 1, 2)
-  input.value = message.question
-  send()
+  input.value = message.question; send()
+}
+function contextContent(m) {
+  const cards = m.recommendation
+  const facts = cards ? [...(cards.competitions || []), ...(cards.teams || [])].map(c => ({ name: c.name || c.title, competitionName: c.competitionName, reason: c.reason })) : []
+  return (m.content + (facts.length ? '\n平台推荐卡片：' + JSON.stringify(facts) : '')
+    + (m.sources?.length ? '\n联网来源：' + JSON.stringify(m.sources.map(s => ({ title: s.title, snippet: s.snippet }))) : '')).slice(0, 3000)
 }
 async function send() {
   const question = input.value.trim()
   if (!question || generating.value) return
-  if (!store.isLogin) {
-    router.push({
-      path: '/login',
-      query: { redirect: advice.value ? '/?assistant=advice' : route.fullPath },
-    })
-    return
-  }
-  const current = ++epoch,
-    owner = store.user?.id,
-    key = storageKey()
-  const history = messages.value
-    .filter((m) => m.content && !m.error && !m.loading)
-    .slice(-12)
-    .map(({ role, content }) => ({ role, content }))
+  if (!store.isLogin) { router.push({ path: '/login', query: { redirect: route.fullPath } }); return }
+  const current = ++epoch, owner = store.user?.id
+  const history = messages.value.filter(m => m.content && !m.error && !m.loading).slice(-10)
+    .map(m => ({ role: m.role, content: contextContent(m) }))
   messages.value.push({ role: 'user', content: question })
-  const answer = ref({
-    role: 'assistant',
-    content: '',
-    loading: true,
-    question,
-  }).value
-  messages.value.push(answer)
-  input.value = ''
-  generating.value = true
-  const abort = new AbortController()
-  controller = abort
-  const timer = setTimeout(() => abort.abort(), advice.value ? 100000 : 125000)
+  const answer = ref({ role: 'assistant', content: '', loading: true, question }).value
+  messages.value.push(answer); input.value = ''; generating.value = true; activeMode = ''
+  const abort = new AbortController(); controller = abort
+  const timer = setTimeout(() => abort.abort(), 150000)
   const valid = () => current === epoch && owner === store.user?.id
+  const request = { message: question, history, competition: resourceCompetition.value, resourceName: resourceName.value }
   scrollToBottom()
   try {
-    if (advice.value) {
+    const intent = await api.post('/assistant/route', request, { signal: abort.signal, timeout: 20000 })
+    if (!valid()) return
+    activeMode = intent.mode; answer.mode = intent.mode
+    if (intent.mode === 'DENIED') {
+      answer.content = '联网赛事搜索目前仅向管理员开放。你可以让我推荐平台内的比赛和队伍，或帮助准备竞赛。'
+    } else if (intent.mode === 'SEARCH') {
+      const result = await api.post('/assistant/search', { ...request, message: intent.message }, { signal: abort.signal, timeout: 75000 })
+      if (!valid()) return
+      answer.content = result.reply; answer.sources = result.sources; answer.searchedAt = result.searchedAt
+    } else if (intent.mode === 'ADVICE') {
       await pendingStop
       if (!valid()) return
+      if (session.value) {
+        try {
+          const saved = await api.get(`/ai/advice/sessions/${session.value.id}`, { signal: abort.signal })
+          if (!valid()) return
+          session.value = saved
+        } catch (error) {
+          if (!valid()) return
+          if (isAdviceSessionMissing(error)) session.value = null
+          else throw error
+        }
+      }
       if (!session.value) {
-        const created = await api.post(
-          '/ai/advice/sessions',
-          {},
-          { signal: abort.signal },
-        )
+        const created = await api.post('/ai/advice/sessions', {}, { signal: abort.signal })
         if (!valid()) return
         session.value = created
-        localStorage.setItem(key, created.id)
-      } else {
-        const saved = await api.get(`/ai/advice/sessions/${session.value.id}`, {
-          signal: abort.signal,
-        })
-        if (!valid()) return
-        session.value = saved
       }
-      const result = await api.post(
-        `/ai/advice/sessions/${session.value.id}/chat`,
-        { message: question, version: session.value.version },
-        { timeout: 100000, signal: abort.signal },
-      )
+      const result = await api.post(`/ai/advice/sessions/${session.value.id}/chat`,
+        { message: intent.message, version: session.value.version }, { timeout: 100000, signal: abort.signal })
       if (!valid()) return
-      session.value.version = result.version
-      answer.content = result.reply
-      answer.recommendation = result.recommendation
+      session.value.version = result.version; answer.content = result.reply; answer.recommendation = result.recommendation
     } else {
       const response = await fetch('/api/training/assistant/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-        body: JSON.stringify({
-          message: question,
-          history,
-          competition: props.competition,
-          tag: props.tag,
-          resourceName: resourceName.value,
-        }),
-        signal: abort.signal,
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify(request), signal: abort.signal,
       })
       if (!response.ok) {
-        if (response.status === 401)
-          router.push({ path: '/login', query: { redirect: route.fullPath } })
-        throw new Error(
-          response.status === 429
-            ? '操作太频繁，请稍后重试'
-            : '学习问答请求失败，请检查登录状态后重试',
-        )
+        if (response.status === 401) router.push({ path: '/login', query: { redirect: route.fullPath } })
+        throw new Error(response.status === 429 ? '操作太频繁，请稍后重试' : '问答请求失败，请检查登录状态后重试')
       }
-      await readEventStream(response, (event) => {
+      await readEventStream(response, event => {
         if (!valid()) return
-        if (event.type === 'chunk') {
-          answer.content += event.content
-          scrollToBottom()
-        }
+        if (event.type === 'chunk') { answer.content += event.content; scrollToBottom() }
         if (event.type === 'error') throw new Error(event.content)
       })
       if (!answer.content && valid()) throw new Error('模型未返回内容，请重试')
@@ -461,59 +338,31 @@ async function send() {
   } catch (error) {
     if (!valid()) return
     answer.error = true
-    if (advice.value && isAdviceSessionMissing(error)) {
-      session.value = null
-      localStorage.removeItem(key)
-      messages.value = messages.value.slice(-2)
-      answer.content = '上次会话已过期或被清空，本次问题已保留。点击重试将开启新对话。'
-    } else answer.content = abort.signal.aborted
-      ? '本轮等待超时，请重试'
-      : error.code === 'ERR_NETWORK' || error instanceof TypeError
-        ? '网络连接失败，请稍后重试'
-        : error.code === 'ECONNABORTED'
-          ? '本轮等待超时，请重试'
-          : error.message || '暂时无法完成，请重试'
+    if (activeMode === 'ADVICE' && isAdviceSessionMissing(error)) session.value = null
+    answer.content = abort.signal.aborted ? '本轮等待超时，请重试' : error.message || '暂时无法完成，请重试'
   } finally {
     clearTimeout(timer)
-    if (valid()) {
-      answer.loading = false
-      generating.value = false
-      controller = null
-      saveHistory()
-      scrollToBottom()
-    }
+    if (valid()) { answer.loading = false; generating.value = false; controller = null; saveHistory(); scrollToBottom() }
   }
 }
-watch(
-  () => store.user?.id,
-  (id, old) => {
-    stopGenerating(false)
-    if (old) localStorage.removeItem(storageKey(old))
-    session.value = null
-    messages.value = []
-    loadHistory()
-  },
-)
-watch(
-  () => route.query.assistant,
-  (value) => {
-    if (advice.value && value === 'advice' && !visible.value) {
-      visible.value = true
-      loadHistory()
-    }
-  },
-  { immediate: true },
-)
-if (!visible.value) loadHistory()
-onBeforeUnmount(stopGenerating)
+watch(() => store.user?.id, (id, old) => {
+  stopGenerating(false)
+  if (old) localStorage.removeItem(storageKey(old))
+  session.value = null; messages.value = []; input.value = ''; resourceName.value = ''; resourceCompetition.value = ''
+  loadHistory()
+})
+watch(() => route.query.assistant, value => { if (value === 'advice') { visible.value = true; scrollToBottom() } }, { immediate: true })
+loadHistory()
+onBeforeUnmount(() => { stopGenerating(); window.removeEventListener('xiaozhi-open', onOpen) })
 defineExpose({ openWithResource })
+
 </script>
 <style scoped>
 .xiaozhi-launcher {
   position: fixed;
   right: 28px;
   bottom: 28px;
-  z-index: 30;
+  z-index: 1100;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -534,7 +383,7 @@ defineExpose({ openWithResource })
   position: fixed;
   right: 28px;
   bottom: 88px;
-  z-index: 31;
+  z-index: 1101;
   width: min(460px, calc(100vw - 32px));
   height: min(620px, calc(100vh - 130px));
   display: flex;
